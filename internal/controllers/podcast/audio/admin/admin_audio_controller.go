@@ -4,23 +4,31 @@ import (
 	"fmt"
 	"mime/multipart"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
 	audioModel "mqfm-backend/internal/models/podcast/audio/admin"
+	categoryService "mqfm-backend/internal/services/category/admin" // Import Service Category
 	audioService "mqfm-backend/internal/services/podcast/audio/admin"
 	"mqfm-backend/internal/utils"
 
 )
 
 type AdminAudioController struct {
-	service *audioService.AdminAudioService
+	service         *audioService.AdminAudioService
+	categoryService *categoryService.AdminCategoryService // Tambahkan field ini
 }
 
-func NewAdminAudioController(s *audioService.AdminAudioService) *AdminAudioController {
-	return &AdminAudioController{service: s}
+// Update Constructor: Menerima Category Service juga
+func NewAdminAudioController(s *audioService.AdminAudioService, cs *categoryService.AdminCategoryService) *AdminAudioController {
+	return &AdminAudioController{
+		service:         s,
+		categoryService: cs,
+	}
 }
 
 func (ctrl *AdminAudioController) Create(c *gin.Context) {
@@ -37,31 +45,66 @@ func (ctrl *AdminAudioController) Create(c *gin.Context) {
 		return
 	}
 
-	var audioPath string
-	if input.AudioFile != nil {
-		audioFilename := fmt.Sprintf("%d_%s", time.Now().Unix(), input.AudioFile.Filename)
-		audioPath = "uploads/audios/" + audioFilename
-		if err := c.SaveUploadedFile(input.AudioFile, audioPath); err != nil {
-			utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to upload audio file", err.Error())
+	// --- VALIDASI KATEGORI ---
+	// Jika CategoryID diisi (tidak 0), cek apakah ada di database
+	if input.CategoryID != 0 {
+		if _, err := ctrl.categoryService.FindByID(input.CategoryID); err != nil {
+			utils.ErrorResponse(c, http.StatusNotFound, "Category ID not found", err.Error())
 			return
 		}
 	}
+	// -------------------------
 
-	var thumbnailPath string
+	pwd, _ := os.Getwd()
+	fmt.Println("DEBUG: Aplikasi berjalan di:", pwd)
+
+	var audioPathDB string
+	if input.AudioFile != nil {
+		uploadDir := filepath.Join(pwd, "uploads", "audios")
+		if err := os.MkdirAll(uploadDir, 0755); err != nil {
+			utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to create audio directory", err.Error())
+			return
+		}
+
+		audioFilename := fmt.Sprintf("%d_%s", time.Now().Unix(), input.AudioFile.Filename)
+		fullSavePath := filepath.Join(uploadDir, audioFilename)
+
+		fmt.Println("DEBUG: Menyimpan Audio ke:", fullSavePath)
+
+		if err := c.SaveUploadedFile(input.AudioFile, fullSavePath); err != nil {
+			utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to upload audio file", err.Error())
+			return
+		}
+
+		audioPathDB = "uploads/audios/" + audioFilename
+	}
+
+	var thumbnailPathDB string
 	if input.ThumbnailFile != nil {
+		uploadDir := filepath.Join(pwd, "uploads", "thumbnails")
+		if err := os.MkdirAll(uploadDir, 0755); err != nil {
+			utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to create thumbnail directory", err.Error())
+			return
+		}
+
 		thumbFilename := fmt.Sprintf("%d_%s", time.Now().Unix(), input.ThumbnailFile.Filename)
-		thumbnailPath = "uploads/thumbnails/" + thumbFilename
-		if err := c.SaveUploadedFile(input.ThumbnailFile, thumbnailPath); err != nil {
+		fullSavePath := filepath.Join(uploadDir, thumbFilename)
+
+		fmt.Println("DEBUG: Menyimpan Thumbnail ke:", fullSavePath)
+
+		if err := c.SaveUploadedFile(input.ThumbnailFile, fullSavePath); err != nil {
 			utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to upload thumbnail", err.Error())
 			return
 		}
+
+		thumbnailPathDB = "uploads/thumbnails/" + thumbFilename
 	}
 
 	audio := audioModel.Audio{
 		Title:       input.Title,
 		Description: input.Description,
-		AudioURL:    audioPath,
-		Thumbnail:   thumbnailPath,
+		AudioURL:    audioPathDB,
+		Thumbnail:   thumbnailPathDB,
 		CategoryID:  input.CategoryID,
 	}
 
@@ -122,6 +165,15 @@ func (ctrl *AdminAudioController) Update(c *gin.Context) {
 		return
 	}
 
+	// --- VALIDASI KATEGORI (UPDATE) ---
+	if input.CategoryID != 0 {
+		if _, err := ctrl.categoryService.FindByID(input.CategoryID); err != nil {
+			utils.ErrorResponse(c, http.StatusNotFound, "Category ID not found", err.Error())
+			return
+		}
+	}
+	// ----------------------------------
+
 	updates := make(map[string]interface{})
 
 	if input.Title != "" {
@@ -134,24 +186,40 @@ func (ctrl *AdminAudioController) Update(c *gin.Context) {
 		updates["category_id"] = input.CategoryID
 	}
 
+	pwd, _ := os.Getwd()
+
 	if input.AudioFile != nil {
+		uploadDir := filepath.Join(pwd, "uploads", "audios")
+		if err := os.MkdirAll(uploadDir, 0755); err != nil {
+			utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to create audio directory", err.Error())
+			return
+		}
+
 		audioFilename := fmt.Sprintf("%d_%s", time.Now().Unix(), input.AudioFile.Filename)
-		audioPath := "uploads/audios/" + audioFilename
-		if err := c.SaveUploadedFile(input.AudioFile, audioPath); err != nil {
+		fullSavePath := filepath.Join(uploadDir, audioFilename)
+
+		if err := c.SaveUploadedFile(input.AudioFile, fullSavePath); err != nil {
 			utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to upload audio file", err.Error())
 			return
 		}
-		updates["audio_url"] = audioPath
+		updates["audio_url"] = "uploads/audios/" + audioFilename
 	}
 
 	if input.ThumbnailFile != nil {
+		uploadDir := filepath.Join(pwd, "uploads", "thumbnails")
+		if err := os.MkdirAll(uploadDir, 0755); err != nil {
+			utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to create thumbnail directory", err.Error())
+			return
+		}
+
 		thumbFilename := fmt.Sprintf("%d_%s", time.Now().Unix(), input.ThumbnailFile.Filename)
-		thumbnailPath := "uploads/thumbnails/" + thumbFilename
-		if err := c.SaveUploadedFile(input.ThumbnailFile, thumbnailPath); err != nil {
+		fullSavePath := filepath.Join(uploadDir, thumbFilename)
+
+		if err := c.SaveUploadedFile(input.ThumbnailFile, fullSavePath); err != nil {
 			utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to upload thumbnail", err.Error())
 			return
 		}
-		updates["thumbnail"] = thumbnailPath
+		updates["thumbnail"] = "uploads/thumbnails/" + thumbFilename
 	}
 
 	updatedAudio, err := ctrl.service.Update(uint(id), updates)

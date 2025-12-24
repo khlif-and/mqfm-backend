@@ -30,7 +30,9 @@ func main() {
 	catAdminController := categoryAdminController.NewAdminCategoryController(catAdminService)
 
 	audAdminService := audioAdminService.NewAdminAudioService(config.DB)
-	audAdminController := audioAdminController.NewAdminAudioController(audAdminService)
+	
+	// UPDATE DISINI: Masukkan catAdminService sebagai parameter kedua
+	audAdminController := audioAdminController.NewAdminAudioController(audAdminService, catAdminService)
 
 	r := gin.Default()
 
