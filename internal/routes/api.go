@@ -6,6 +6,7 @@ import (
 	adminController "mqfm-backend/internal/controllers/auth/admin"
 	userController "mqfm-backend/internal/controllers/auth/user"
 	categoryAdminController "mqfm-backend/internal/controllers/category/admin"
+	audioAdminController "mqfm-backend/internal/controllers/podcast/audio/admin" // Import baru
 	"mqfm-backend/internal/middleware"
 
 )
@@ -15,15 +16,23 @@ func SetupRoutes(
 	aController *adminController.AdminAuthController,
 	uController *userController.UserAuthController,
 	catAdminController *categoryAdminController.AdminCategoryController,
+	audioAdminController *audioAdminController.AdminAudioController, // Parameter baru
 ) {
 	api := r.Group("/api")
 	{
 		// --- CATEGORY Routes (Universal / Public) ---
-		// Endpoint ini bisa diakses siapa saja tanpa perlu login (User/Admin)
 		categories := api.Group("/categories")
 		{
 			categories.GET("/", catAdminController.FindAll)
 			categories.GET("/:id", catAdminController.FindByID)
+		}
+
+		// --- AUDIO Routes (Universal / Public) ---
+		// Endpoint ini bisa diakses user tanpa login untuk mendengarkan podcast
+		audios := api.Group("/audios")
+		{
+			audios.GET("/", audioAdminController.FindAll)
+			audios.GET("/:id", audioAdminController.FindByID)
 		}
 
 		// --- ADMIN Routes ---
@@ -42,13 +51,20 @@ func SetupRoutes(
 				protectedAdmin.PUT("/auth/update/:id", aController.Update)
 				protectedAdmin.POST("/auth/logout", aController.Logout)
 
-				// Category Management (Admin Only - Write Operations)
-				// Create, Update, Delete tetap butuh login admin
+				// Category Management (Admin Only)
 				adminCategories := protectedAdmin.Group("/categories")
 				{
 					adminCategories.POST("/", catAdminController.Create)
 					adminCategories.PUT("/:id", catAdminController.Update)
 					adminCategories.DELETE("/:id", catAdminController.Delete)
+				}
+
+				// Audio Management (Admin Only)
+				adminAudios := protectedAdmin.Group("/audios")
+				{
+					adminAudios.POST("/", audioAdminController.Create)
+					adminAudios.PUT("/:id", audioAdminController.Update)
+					adminAudios.DELETE("/:id", audioAdminController.Delete)
 				}
 			}
 		}
