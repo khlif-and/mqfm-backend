@@ -6,7 +6,9 @@ import (
 	adminController "mqfm-backend/internal/controllers/auth/admin"
 	userController "mqfm-backend/internal/controllers/auth/user"
 	categoryAdminController "mqfm-backend/internal/controllers/category/admin"
-	audioAdminController "mqfm-backend/internal/controllers/podcast/audio/admin" // Import baru
+	audioAdminController "mqfm-backend/internal/controllers/podcast/audio/admin"
+	playlistUserController "mqfm-backend/internal/controllers/playlist/user"
+	likeUserController "mqfm-backend/internal/controllers/likes/user" 
 	"mqfm-backend/internal/middleware"
 
 )
@@ -16,43 +18,39 @@ func SetupRoutes(
 	aController *adminController.AdminAuthController,
 	uController *userController.UserAuthController,
 	catAdminController *categoryAdminController.AdminCategoryController,
-	audioAdminController *audioAdminController.AdminAudioController, // Parameter baru
+	audioAdminController *audioAdminController.AdminAudioController,
+	playlistController *playlistUserController.UserPlaylistController,
+	likeController *likeUserController.UserLikeController, 
 ) {
 	api := r.Group("/api")
 	{
+		
 		categories := api.Group("/categories")
 		{
 			categories.GET("/", catAdminController.FindAll)
 			categories.GET("/:id", catAdminController.FindByID)
 		}
 
-
-audios := api.Group("/audios")
+		audios := api.Group("/audios")
 		{
 			audios.GET("/", audioAdminController.FindAll)
-		
-			audios.GET("/search", audioAdminController.Search) 
-			
+			audios.GET("/search", audioAdminController.Search)
 			audios.GET("/:id", audioAdminController.FindByID)
 		}
 
-		// --- ADMIN Routes ---
+		
 		adminAuth := api.Group("/admin")
 		{
-			// Public Auth
 			adminAuth.POST("/auth/register", aController.Register)
 			adminAuth.POST("/auth/login", aController.Login)
 
-			// Protected Admin Routes
 			protectedAdmin := adminAuth.Group("/")
 			protectedAdmin.Use(middleware.JWTMiddleware())
 			{
-				// Auth Profile
 				protectedAdmin.GET("/auth/me", aController.Me)
 				protectedAdmin.PUT("/auth/update/:id", aController.Update)
 				protectedAdmin.POST("/auth/logout", aController.Logout)
 
-				// Category Management (Admin Only)
 				adminCategories := protectedAdmin.Group("/categories")
 				{
 					adminCategories.POST("/", catAdminController.Create)
@@ -60,7 +58,6 @@ audios := api.Group("/audios")
 					adminCategories.DELETE("/:id", catAdminController.Delete)
 				}
 
-				// Audio Management (Admin Only)
 				adminAudios := protectedAdmin.Group("/audios")
 				{
 					adminAudios.POST("/", audioAdminController.Create)
@@ -70,18 +67,32 @@ audios := api.Group("/audios")
 			}
 		}
 
-		// --- USER Routes ---
-		userAuth := api.Group("/user/auth")
+		
+		userAuth := api.Group("/user")
 		{
-			userAuth.POST("/register", uController.Register)
-			userAuth.POST("/login", uController.Login)
+			userAuth.POST("/auth/register", uController.Register)
+			userAuth.POST("/auth/login", uController.Login)
 
 			protectedUser := userAuth.Group("/")
 			protectedUser.Use(middleware.JWTMiddleware())
 			{
-				protectedUser.GET("/me", uController.Me)
-				protectedUser.PUT("/update/:id", uController.Update)
-				protectedUser.POST("/logout", uController.Logout)
+				protectedUser.GET("/auth/me", uController.Me)
+				protectedUser.PUT("/auth/update/:id", uController.Update)
+				protectedUser.POST("/auth/logout", uController.Logout)
+
+				playlists := protectedUser.Group("/playlists")
+				{
+					playlists.GET("/", playlistController.GetMyPlaylists)
+					playlists.GET("/:id", playlistController.GetDetail)
+					playlists.POST("/add-audio", playlistController.AddAudio)
+				}
+
+				likes := protectedUser.Group("/likes")
+				{
+					likes.POST("/", likeController.Like)             
+					likes.DELETE("/:audio_id", likeController.Unlike) 
+					likes.GET("/", likeController.GetLikes)          
+				}
 			}
 		}
 	}
