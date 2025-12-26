@@ -248,3 +248,20 @@ func (ctrl *AdminAudioController) Delete(c *gin.Context) {
 
 	utils.SuccessResponse(c, http.StatusOK, "Audio deleted successfully", nil)
 }
+
+func (ctrl *AdminAudioController) Search(c *gin.Context) {
+	query := c.Query("q")
+	
+	if query == "" {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Search keyword is required", nil)
+		return
+	}
+
+	audios, err := ctrl.service.Search(query)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to search audios", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Audios found successfully", audios)
+}

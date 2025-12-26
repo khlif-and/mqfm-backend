@@ -20,18 +20,19 @@ func SetupRoutes(
 ) {
 	api := r.Group("/api")
 	{
-		// --- CATEGORY Routes (Universal / Public) ---
 		categories := api.Group("/categories")
 		{
 			categories.GET("/", catAdminController.FindAll)
 			categories.GET("/:id", catAdminController.FindByID)
 		}
 
-		// --- AUDIO Routes (Universal / Public) ---
-		// Endpoint ini bisa diakses user tanpa login untuk mendengarkan podcast
-		audios := api.Group("/audios")
+
+audios := api.Group("/audios")
 		{
 			audios.GET("/", audioAdminController.FindAll)
+		
+			audios.GET("/search", audioAdminController.Search) 
+			
 			audios.GET("/:id", audioAdminController.FindByID)
 		}
 
