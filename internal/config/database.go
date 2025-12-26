@@ -10,6 +10,8 @@ import (
 	userModel "mqfm-backend/internal/models/auth/user"
 	categoryAdminModel "mqfm-backend/internal/models/category/admin"
 	audioAdminModel "mqfm-backend/internal/models/podcast/audio/admin"
+	playlistModel "mqfm-backend/internal/models/playlist/user"
+	likeModel "mqfm-backend/internal/models/likes/user" 
 	"mqfm-backend/internal/utils"
 
 )
@@ -27,6 +29,8 @@ func ConnectDatabase() {
 		&userModel.User{},
 		&categoryAdminModel.Category{},
 		&audioAdminModel.Audio{},
+		&playlistModel.Playlist{},
+		&likeModel.Like{}, 
 	)
 	DB = database
 }
