@@ -64,3 +64,13 @@ func (s *AdminAudioService) Delete(id uint) error {
 
 	return s.db.Delete(&audio).Error
 }
+
+func (s *AdminAudioService) Search(query string) ([]audioModel.Audio, error) {
+	var audios []audioModel.Audio
+	// Mencari berdasarkan Title yang mengandung kata kunci (query)
+	// Menggunakan query LIKE %...%
+	if err := s.db.Where("title LIKE ?", "%"+query+"%").Find(&audios).Error; err != nil {
+		return nil, err
+	}
+	return audios, nil
+}
