@@ -31,10 +31,12 @@ func main() {
 
 	audAdminService := audioAdminService.NewAdminAudioService(config.DB)
 	
-	// UPDATE DISINI: Masukkan catAdminService sebagai parameter kedua
 	audAdminController := audioAdminController.NewAdminAudioController(audAdminService, catAdminService)
 
 	r := gin.Default()
+
+
+	r.Static("/uploads", "./uploads") 
 
 	routes.SetupRoutes(r, aController, uController, catAdminController, audAdminController)
 
