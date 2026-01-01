@@ -6,9 +6,9 @@ import (
 	adminController "mqfm-backend/internal/controllers/auth/admin"
 	userController "mqfm-backend/internal/controllers/auth/user"
 	categoryAdminController "mqfm-backend/internal/controllers/category/admin"
-	audioAdminController "mqfm-backend/internal/controllers/podcast/audio/admin"
+	likeUserController "mqfm-backend/internal/controllers/likes/user"
 	playlistUserController "mqfm-backend/internal/controllers/playlist/user"
-	likeUserController "mqfm-backend/internal/controllers/likes/user" 
+	audioAdminController "mqfm-backend/internal/controllers/podcast/audio/admin"
 	"mqfm-backend/internal/middleware"
 
 )
@@ -20,11 +20,11 @@ func SetupRoutes(
 	catAdminController *categoryAdminController.AdminCategoryController,
 	audioAdminController *audioAdminController.AdminAudioController,
 	playlistController *playlistUserController.UserPlaylistController,
-	likeController *likeUserController.UserLikeController, 
+	likeController *likeUserController.UserLikeController,
 ) {
 	api := r.Group("/api")
 	{
-		
+
 		categories := api.Group("/categories")
 		{
 			categories.GET("/", catAdminController.FindAll)
@@ -38,7 +38,6 @@ func SetupRoutes(
 			audios.GET("/:id", audioAdminController.FindByID)
 		}
 
-		
 		adminAuth := api.Group("/admin")
 		{
 			adminAuth.POST("/auth/register", aController.Register)
@@ -67,7 +66,6 @@ func SetupRoutes(
 			}
 		}
 
-		
 		userAuth := api.Group("/user")
 		{
 			userAuth.POST("/auth/register", uController.Register)
@@ -83,15 +81,17 @@ func SetupRoutes(
 				playlists := protectedUser.Group("/playlists")
 				{
 					playlists.GET("/", playlistController.GetMyPlaylists)
+					playlists.GET("/search", playlistController.Search)
 					playlists.GET("/:id", playlistController.GetDetail)
+					playlists.POST("/", playlistController.Create)
 					playlists.POST("/add-audio", playlistController.AddAudio)
 				}
 
 				likes := protectedUser.Group("/likes")
 				{
-					likes.POST("/", likeController.Like)             
-					likes.DELETE("/:audio_id", likeController.Unlike) 
-					likes.GET("/", likeController.GetLikes)          
+					likes.POST("/", likeController.Like)
+					likes.DELETE("/:audio_id", likeController.Unlike)
+					likes.GET("/", likeController.GetLikes)
 				}
 			}
 		}

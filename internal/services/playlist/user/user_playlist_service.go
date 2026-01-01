@@ -7,7 +7,6 @@ import (
 
 	adminAudioModel "mqfm-backend/internal/models/podcast/audio/admin"
 	playlistModel "mqfm-backend/internal/models/playlist/user"
-
 )
 
 type UserPlaylistService struct {
@@ -25,6 +24,12 @@ func (s *UserPlaylistService) Create(playlist *playlistModel.Playlist) error {
 func (s *UserPlaylistService) GetByUserID(userID uint) ([]playlistModel.Playlist, error) {
 	var playlists []playlistModel.Playlist
 	err := s.db.Where("user_id = ?", userID).Preload("Audios").Find(&playlists).Error
+	return playlists, err
+}
+
+func (s *UserPlaylistService) Search(userID uint, query string) ([]playlistModel.Playlist, error) {
+	var playlists []playlistModel.Playlist
+	err := s.db.Where("user_id = ? AND name LIKE ?", userID, "%"+query+"%").Preload("Audios").Find(&playlists).Error
 	return playlists, err
 }
 
