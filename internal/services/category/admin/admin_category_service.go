@@ -64,3 +64,12 @@ func (s *AdminCategoryService) Delete(id uint) error {
 
 	return s.db.Delete(&category).Error
 }
+
+func (s *AdminCategoryService) Search(query string) ([]categoryModel.Category, error) {
+	var categories []categoryModel.Category
+	searchQuery := "%" + query + "%"
+	if err := s.db.Where("name LIKE ? OR description LIKE ?", searchQuery, searchQuery).Find(&categories).Error; err != nil {
+		return nil, err
+	}
+	return categories, nil
+}

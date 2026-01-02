@@ -7,6 +7,7 @@ import (
 	userController "mqfm-backend/internal/controllers/auth/user"
 	categoryAdminController "mqfm-backend/internal/controllers/category/admin"
 	likeUserController "mqfm-backend/internal/controllers/likes/user"
+	lsController "mqfm-backend/internal/controllers/livestream"
 	playlistUserController "mqfm-backend/internal/controllers/playlist/user"
 	audioAdminController "mqfm-backend/internal/controllers/podcast/audio/admin"
 	"mqfm-backend/internal/middleware"
@@ -21,13 +22,14 @@ func SetupRoutes(
 	audioAdminController *audioAdminController.AdminAudioController,
 	playlistController *playlistUserController.UserPlaylistController,
 	likeController *likeUserController.UserLikeController,
+	lsController *lsController.LiveStreamController,
 ) {
 	api := r.Group("/api")
 	{
-
 		categories := api.Group("/categories")
 		{
 			categories.GET("/", catAdminController.FindAll)
+			categories.GET("/search", catAdminController.Search)
 			categories.GET("/:id", catAdminController.FindByID)
 		}
 
@@ -36,6 +38,11 @@ func SetupRoutes(
 			audios.GET("/", audioAdminController.FindAll)
 			audios.GET("/search", audioAdminController.Search)
 			audios.GET("/:id", audioAdminController.FindByID)
+		}
+
+		youtube := api.Group("/youtube")
+		{
+			youtube.GET("/live-status", lsController.GetStatus)
 		}
 
 		adminAuth := api.Group("/admin")

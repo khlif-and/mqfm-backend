@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 
 	playlistModel "mqfm-backend/internal/models/playlist/user"
 	playlistService "mqfm-backend/internal/services/playlist/user"
@@ -26,12 +27,17 @@ func NewUserPlaylistController(s *playlistService.UserPlaylistService) *UserPlay
 func (ctrl *UserPlaylistController) GetMyPlaylists(c *gin.Context) {
 	userID := utils.GetUserID(c)
 	if userID == 0 {
+		utils.Log.Warn("[Controller] Unauthorized access attempt",
+			zap.String("ip", c.ClientIP()),
+			zap.String("endpoint", "GetMyPlaylists"),
+		)
 		utils.ErrorResponse(c, http.StatusUnauthorized, "Unauthorized", nil)
 		return
 	}
 
 	playlists, err := ctrl.service.GetByUserID(userID)
 	if err != nil {
+		// Log error sudah ada di service, tapi kita bisa log context HTTP-nya disini
 		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to fetch playlists", err.Error())
 		return
 	}
@@ -47,6 +53,9 @@ func (ctrl *UserPlaylistController) Search(c *gin.Context) {
 
 	query := c.Query("q")
 	if query == "" {
+		utils.Log.Info("[Controller] Search query missing",
+			zap.Uint("user_id", userID),
+		)
 		utils.ErrorResponse(c, http.StatusBadRequest, "Search query is required", nil)
 		return
 	}
@@ -66,6 +75,10 @@ func (ctrl *UserPlaylistController) Create(c *gin.Context) {
 	}
 
 	if err := c.ShouldBind(&input); err != nil {
+		utils.Log.Warn("[Controller] Invalid playlist input",
+			zap.Error(err),
+			zap.String("ip", c.ClientIP()),
+		)
 		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid input", err.Error())
 		return
 	}
@@ -83,6 +96,10 @@ func (ctrl *UserPlaylistController) Create(c *gin.Context) {
 		pwd, _ := os.Getwd()
 		uploadDir := filepath.Join(pwd, "uploads", "playlists")
 		if err := os.MkdirAll(uploadDir, 0755); err != nil {
+			utils.Log.Error("[Controller] Failed to create upload directory",
+				zap.Error(err),
+				zap.String("path", uploadDir),
+			)
 			utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to create directory", err.Error())
 			return
 		}
@@ -91,6 +108,10 @@ func (ctrl *UserPlaylistController) Create(c *gin.Context) {
 		fullPath := filepath.Join(uploadDir, filename)
 
 		if err := c.SaveUploadedFile(file, fullPath); err != nil {
+			utils.Log.Error("[Controller] Failed to save uploaded file",
+				zap.Error(err),
+				zap.String("path", fullPath),
+			)
 			utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to upload image", err.Error())
 			return
 		}
@@ -104,6 +125,7 @@ func (ctrl *UserPlaylistController) Create(c *gin.Context) {
 	}
 
 	if err := ctrl.service.Create(&newPlaylist); err != nil {
+		// Error database sudah dilog di Service
 		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to create playlist", err.Error())
 		return
 	}
@@ -118,6 +140,10 @@ func (ctrl *UserPlaylistController) AddAudio(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
+		utils.Log.Warn("[Controller] Invalid AddAudio input",
+			zap.Error(err),
+			zap.String("ip", c.ClientIP()),
+		)
 		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid input", err.Error())
 		return
 	}
@@ -129,6 +155,8 @@ func (ctrl *UserPlaylistController) AddAudio(c *gin.Context) {
 	}
 
 	if err := ctrl.service.AddAudioToPlaylist(userID, input.PlaylistID, input.AudioID); err != nil {
+		// Log specific logic errors from service as Info/Warn in controller context if needed
+		// But mostly service logs capture the system error.
 		utils.ErrorResponse(c, http.StatusBadRequest, "Failed to add audio", err.Error())
 		return
 	}
@@ -140,6 +168,9 @@ func (ctrl *UserPlaylistController) GetDetail(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
+		utils.Log.Info("[Controller] Invalid Playlist ID param",
+			zap.String("id_param", idParam),
+		)
 		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid ID", nil)
 		return
 	}

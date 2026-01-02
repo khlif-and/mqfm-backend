@@ -124,3 +124,20 @@ func (ctrl *AdminCategoryController) Delete(c *gin.Context) {
 
 	utils.SuccessResponse(c, http.StatusOK, "Category deleted successfully", nil)
 }
+
+func (ctrl *AdminCategoryController) Search(c *gin.Context) {
+	query := c.Query("q")
+
+	if query == "" {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Search keyword is required", nil)
+		return
+	}
+
+	categories, err := ctrl.service.Search(query)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to search categories", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Categories found successfully", categories)
+}
