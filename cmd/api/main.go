@@ -20,6 +20,7 @@ import (
 	lsModel "mqfm-backend/internal/models/livestream"
 	"mqfm-backend/internal/routes"
 	adminAuthService "mqfm-backend/internal/services/auth/admin"
+	userAuthRepo "mqfm-backend/internal/repositories/auth/user"
 	userAuthService "mqfm-backend/internal/services/auth/user"
 	catAdminService "mqfm-backend/internal/services/category/admin"
 	likeUserService "mqfm-backend/internal/services/likes/user"
@@ -51,8 +52,9 @@ func main() {
 	adminRepo := adminAuthService.NewAdminAuthService(db)
 	adminCtrl := adminController.NewAdminAuthController(adminRepo)
 
-	userRepo := userAuthService.NewUserAuthService(db)
-	userCtrl := userController.NewUserAuthController(userRepo)
+	userRepository := userAuthRepo.NewUserAuthRepository(db)
+	userService := userAuthService.NewUserAuthService(userRepository)
+	userCtrl := userController.NewUserAuthController(userService)
 
 	catRepo := catAdminService.NewAdminCategoryService(db)
 	catCtrl := catAdminController.NewAdminCategoryController(catRepo)

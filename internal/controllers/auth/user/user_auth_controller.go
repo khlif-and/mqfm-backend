@@ -3,11 +3,10 @@ package user
 import (
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 
-	userModel "mqfm-backend/internal/models/auth/user"
+	dto "mqfm-backend/internal/dto/auth"
 	userService "mqfm-backend/internal/services/auth/user"
 	"mqfm-backend/internal/utils"
 
@@ -22,70 +21,75 @@ func NewUserAuthController(s *userService.UserAuthService) *UserAuthController {
 }
 
 func (ctrl *UserAuthController) Register(c *gin.Context) {
-	var input struct {
-		Username string `json:"username"`
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
-
-	if err := c.ShouldBindJSON(&input); err != nil {
+	var input dto.RegisterRequest
+	if err := c.ShouldBind(&input); err != nil {
 		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid input", err.Error())
 		return
 	}
 
-	user := userModel.User{
-		Username: input.Username,
-		Email:    input.Email,
-		Password: input.Password,
-	}
+	file, _ := c.FormFile("profile_picture")
 
-	if err := ctrl.service.Register(&user); err != nil {
+	user, err := ctrl.service.Register(input, file)
+	if err != nil {
 		utils.Log.Error("User registration error: " + err.Error())
 		utils.ErrorResponse(c, http.StatusInternalServerError, "User registration failed", err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusCreated, "User registered successfully", user)
+	var initials, avatarColor string
+	if user.ProfilePicture == "" {
+		initials = utils.GetInitials(user.Username)
+		avatarColor = utils.GenerateAmbientColor(user.Username)
+	}
+
+	response := dto.UserResponse{
+		ID:             user.ID,
+		Username:       user.Username,
+		Email:          user.Email,
+		Role:           user.Role,
+		ProfilePicture: user.ProfilePicture,
+		Initials:       initials,
+		AvatarColor:    avatarColor,
+		CreatedAt:      user.CreatedAt,
+		UpdatedAt:      user.UpdatedAt,
+	}
+
+	utils.SuccessResponse(c, http.StatusCreated, "User registered successfully", response)
 }
 
 func (ctrl *UserAuthController) Login(c *gin.Context) {
-	var input struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
-
+	var input dto.LoginRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
 		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid input", err.Error())
 		return
 	}
 
-	token, user, err := ctrl.service.Login(input.Email, input.Password)
+	token, user, err := ctrl.service.Login(input)
 	if err != nil {
 		utils.ErrorResponse(c, http.StatusUnauthorized, "Login failed", err.Error())
 		return
 	}
 
-	type LoginResponse struct {
-		ID        uint      `json:"id"`
-		Username  string    `json:"username"`
-		Email     string    `json:"email"`
-		Role      string    `json:"role"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Token     string    `json:"token"`
+	var initials, avatarColor string
+	if user.ProfilePicture == "" {
+		initials = utils.GetInitials(user.Username)
+		avatarColor = utils.GenerateAmbientColor(user.Username)
 	}
 
-	responseData := LoginResponse{
-		ID:        user.ID,
-		Username:  user.Username,
-		Email:     user.Email,
-		Role:      user.Role,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Token:     token,
+	response := dto.UserResponse{
+		ID:             user.ID,
+		Username:       user.Username,
+		Email:          user.Email,
+		Role:           user.Role,
+		ProfilePicture: user.ProfilePicture,
+		Initials:       initials,
+		AvatarColor:    avatarColor,
+		CreatedAt:      user.CreatedAt,
+		UpdatedAt:      user.UpdatedAt,
+		Token:          token,
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "Login success", responseData)
+	utils.SuccessResponse(c, http.StatusOK, "Login success", response)
 }
 
 func (ctrl *UserAuthController) Update(c *gin.Context) {
@@ -96,20 +100,40 @@ func (ctrl *UserAuthController) Update(c *gin.Context) {
 		return
 	}
 
-	var updates map[string]interface{}
-	if err := c.ShouldBindJSON(&updates); err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid update data", err.Error())
+	var input dto.UpdateUserRequest
+	if err := c.ShouldBind(&input); err != nil {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid input", err.Error())
 		return
 	}
 
-	updatedUser, err := ctrl.service.UpdateUser(uint(id), updates)
+	file, _ := c.FormFile("profile_picture")
+
+	updatedUser, err := ctrl.service.UpdateUser(uint(id), input, file)
 	if err != nil {
 		utils.Log.Error("User update error: " + err.Error())
 		utils.ErrorResponse(c, http.StatusInternalServerError, "User update failed", err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "User updated successfully", updatedUser)
+	var initials, avatarColor string
+	if updatedUser.ProfilePicture == "" {
+		initials = utils.GetInitials(updatedUser.Username)
+		avatarColor = utils.GenerateAmbientColor(updatedUser.Username)
+	}
+
+	response := dto.UserResponse{
+		ID:             updatedUser.ID,
+		Username:       updatedUser.Username,
+		Email:          updatedUser.Email,
+		Role:           updatedUser.Role,
+		ProfilePicture: updatedUser.ProfilePicture,
+		Initials:       initials,
+		AvatarColor:    avatarColor,
+		CreatedAt:      updatedUser.CreatedAt,
+		UpdatedAt:      updatedUser.UpdatedAt,
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "User updated successfully", response)
 }
 
 func (ctrl *UserAuthController) Logout(c *gin.Context) {
@@ -139,22 +163,22 @@ func (ctrl *UserAuthController) Me(c *gin.Context) {
 		return
 	}
 
-	type MeResponse struct {
-		ID        uint      `json:"id"`
-		Username  string    `json:"username"`
-		Email     string    `json:"email"`
-		Role      string    `json:"role"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
+	var initials, avatarColor string
+	if user.ProfilePicture == "" {
+		initials = utils.GetInitials(user.Username)
+		avatarColor = utils.GenerateAmbientColor(user.Username)
 	}
 
-	response := MeResponse{
-		ID:        user.ID,
-		Username:  user.Username,
-		Email:     user.Email,
-		Role:      user.Role,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
+	response := dto.UserResponse{
+		ID:             user.ID,
+		Username:       user.Username,
+		Email:          user.Email,
+		Role:           user.Role,
+		ProfilePicture: user.ProfilePicture,
+		Initials:       initials,
+		AvatarColor:    avatarColor,
+		CreatedAt:      user.CreatedAt,
+		UpdatedAt:      user.UpdatedAt,
 	}
 
 	utils.SuccessResponse(c, http.StatusOK, "User profile retrieved successfully", response)
