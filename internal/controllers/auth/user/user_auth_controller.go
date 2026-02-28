@@ -92,6 +92,41 @@ func (ctrl *UserAuthController) Login(c *gin.Context) {
 	utils.SuccessResponse(c, http.StatusOK, "Login success", response)
 }
 
+func (ctrl *UserAuthController) GoogleLogin(c *gin.Context) {
+	var input dto.GoogleLoginRequest
+	if err := c.ShouldBindJSON(&input); err != nil {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid input", err.Error())
+		return
+	}
+
+	token, user, err := ctrl.service.GoogleLogin(input)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "Google login failed", err.Error())
+		return
+	}
+
+	var initials, avatarColor string
+	if user.ProfilePicture == "" {
+		initials = utils.GetInitials(user.Username)
+		avatarColor = utils.GenerateAmbientColor(user.Username)
+	}
+
+	response := dto.UserResponse{
+		ID:             user.ID,
+		Username:       user.Username,
+		Email:          user.Email,
+		Role:           user.Role,
+		ProfilePicture: user.ProfilePicture,
+		Initials:       initials,
+		AvatarColor:    avatarColor,
+		CreatedAt:      user.CreatedAt,
+		UpdatedAt:      user.UpdatedAt,
+		Token:          token,
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Google login success", response)
+}
+
 func (ctrl *UserAuthController) Update(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.Atoi(idParam)

@@ -10,6 +10,7 @@ type UserAuthRepository interface {
 	Create(user *userModel.User) error
 	FindByEmail(email string) (*userModel.User, error)
 	FindByID(id uint) (*userModel.User, error)
+	FindByProviderID(provider string, providerID string) (*userModel.User, error)
 	Update(id uint, updates map[string]interface{}) error
 }
 
@@ -36,6 +37,14 @@ func (r *userAuthRepository) FindByEmail(email string) (*userModel.User, error) 
 func (r *userAuthRepository) FindByID(id uint) (*userModel.User, error) {
 	var user userModel.User
 	if err := r.db.First(&user, id).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *userAuthRepository) FindByProviderID(provider string, providerID string) (*userModel.User, error) {
+	var user userModel.User
+	if err := r.db.Where("provider = ? AND provider_id = ?", provider, providerID).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil

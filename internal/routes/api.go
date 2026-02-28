@@ -6,12 +6,12 @@ import (
 	adminController "mqfm-backend/internal/controllers/auth/admin"
 	userController "mqfm-backend/internal/controllers/auth/user"
 	categoryAdminController "mqfm-backend/internal/controllers/category/admin"
+	historyUserController "mqfm-backend/internal/controllers/history/user"
 	likeUserController "mqfm-backend/internal/controllers/likes/user"
 	lsController "mqfm-backend/internal/controllers/livestream"
 	playlistUserController "mqfm-backend/internal/controllers/playlist/user"
 	audioAdminController "mqfm-backend/internal/controllers/podcast/audio/admin"
 	"mqfm-backend/internal/middleware"
-
 )
 
 func SetupRoutes(
@@ -22,6 +22,7 @@ func SetupRoutes(
 	audioAdminController *audioAdminController.AdminAudioController,
 	playlistController *playlistUserController.UserPlaylistController,
 	likeController *likeUserController.UserLikeController,
+	historyController *historyUserController.UserHistoryController,
 	lsController *lsController.LiveStreamController,
 ) {
 	api := r.Group("/api")
@@ -37,7 +38,7 @@ func SetupRoutes(
 		{
 			audios.GET("/", audioAdminController.FindAll)
 			audios.GET("/search", audioAdminController.Search)
-			audios.GET("/:id", audioAdminController.FindByID)
+			audios.GET("/:id", middleware.OptionalJWTMiddleware(), audioAdminController.FindByID)
 		}
 
 		youtube := api.Group("/youtube")
@@ -77,6 +78,7 @@ func SetupRoutes(
 		{
 			userAuth.POST("/auth/register", uController.Register)
 			userAuth.POST("/auth/login", uController.Login)
+			userAuth.POST("/auth/google", uController.GoogleLogin)
 
 			protectedUser := userAuth.Group("/")
 			protectedUser.Use(middleware.JWTMiddleware())
@@ -99,6 +101,13 @@ func SetupRoutes(
 					likes.POST("/", likeController.Like)
 					likes.DELETE("/:audio_id", likeController.Unlike)
 					likes.GET("/", likeController.GetLikes)
+				}
+
+				history := protectedUser.Group("/history")
+				{
+					history.GET("/", historyController.GetHistory)
+					history.DELETE("/:audio_id", historyController.DeleteHistory)
+					history.DELETE("/clear", historyController.ClearHistory)
 				}
 			}
 		}

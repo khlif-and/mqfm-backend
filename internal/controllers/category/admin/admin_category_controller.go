@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	categoryModel "mqfm-backend/internal/models/category/admin"
+	categoryDto "mqfm-backend/internal/dto/category"
 	categoryService "mqfm-backend/internal/services/category/admin"
 	"mqfm-backend/internal/utils"
 
@@ -21,28 +21,31 @@ func NewAdminCategoryController(s *categoryService.AdminCategoryService) *AdminC
 }
 
 func (ctrl *AdminCategoryController) Create(c *gin.Context) {
-	var input struct {
-		Name        string `json:"name" binding:"required"`
-		Description string `json:"description"`
-	}
+	var input categoryDto.CreateCategoryRequest
 
-	if err := c.ShouldBindJSON(&input); err != nil {
+	if err := c.ShouldBind(&input); err != nil {
 		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid input", err.Error())
 		return
 	}
 
-	category := categoryModel.Category{
-		Name:        input.Name,
-		Description: input.Description,
-	}
+	file, _ := c.FormFile("image")
 
-	if err := ctrl.service.Create(&category); err != nil {
+	category, err := ctrl.service.Create(input, file)
+	if err != nil {
 		utils.Log.Error("Category creation error: " + err.Error())
 		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to create category", err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusCreated, "Category created successfully", category)
+	response := categoryDto.CategoryResponse{
+		ID:        category.ID,
+		Name:      category.Name,
+		Image:     category.Image,
+		CreatedAt: category.CreatedAt,
+		UpdatedAt: category.UpdatedAt,
+	}
+
+	utils.SuccessResponse(c, http.StatusCreated, "Category created successfully", response)
 }
 
 func (ctrl *AdminCategoryController) FindAll(c *gin.Context) {
@@ -52,7 +55,18 @@ func (ctrl *AdminCategoryController) FindAll(c *gin.Context) {
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "Categories retrieved successfully", categories)
+	var response []categoryDto.CategoryResponse
+	for _, cat := range categories {
+		response = append(response, categoryDto.CategoryResponse{
+			ID:        cat.ID,
+			Name:      cat.Name,
+			Image:     cat.Image,
+			CreatedAt: cat.CreatedAt,
+			UpdatedAt: cat.UpdatedAt,
+		})
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Categories retrieved successfully", response)
 }
 
 func (ctrl *AdminCategoryController) FindByID(c *gin.Context) {
@@ -69,7 +83,15 @@ func (ctrl *AdminCategoryController) FindByID(c *gin.Context) {
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "Category retrieved successfully", category)
+	response := categoryDto.CategoryResponse{
+		ID:        category.ID,
+		Name:      category.Name,
+		Image:     category.Image,
+		CreatedAt: category.CreatedAt,
+		UpdatedAt: category.UpdatedAt,
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Category retrieved successfully", response)
 }
 
 func (ctrl *AdminCategoryController) Update(c *gin.Context) {
@@ -80,32 +102,30 @@ func (ctrl *AdminCategoryController) Update(c *gin.Context) {
 		return
 	}
 
-	var input struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
-	}
-
-	if err := c.ShouldBindJSON(&input); err != nil {
+	var input categoryDto.UpdateCategoryRequest
+	if err := c.ShouldBind(&input); err != nil {
 		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid update data", err.Error())
 		return
 	}
 
-	updates := make(map[string]interface{})
-	if input.Name != "" {
-		updates["name"] = input.Name
-	}
-	if input.Description != "" {
-		updates["description"] = input.Description
-	}
+	file, _ := c.FormFile("image")
 
-	updatedCategory, err := ctrl.service.Update(uint(id), updates)
+	updatedCategory, err := ctrl.service.Update(uint(id), input, file)
 	if err != nil {
 		utils.Log.Error("Category update error: " + err.Error())
 		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to update category", err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "Category updated successfully", updatedCategory)
+	response := categoryDto.CategoryResponse{
+		ID:        updatedCategory.ID,
+		Name:      updatedCategory.Name,
+		Image:     updatedCategory.Image,
+		CreatedAt: updatedCategory.CreatedAt,
+		UpdatedAt: updatedCategory.UpdatedAt,
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Category updated successfully", response)
 }
 
 func (ctrl *AdminCategoryController) Delete(c *gin.Context) {
@@ -139,5 +159,16 @@ func (ctrl *AdminCategoryController) Search(c *gin.Context) {
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "Categories found successfully", categories)
+	var response []categoryDto.CategoryResponse
+	for _, cat := range categories {
+		response = append(response, categoryDto.CategoryResponse{
+			ID:        cat.ID,
+			Name:      cat.Name,
+			Image:     cat.Image,
+			CreatedAt: cat.CreatedAt,
+			UpdatedAt: cat.UpdatedAt,
+		})
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Categories found successfully", response)
 }

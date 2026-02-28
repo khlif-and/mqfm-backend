@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	likesDto "mqfm-backend/internal/dto/likes"
 	likeService "mqfm-backend/internal/services/likes/user"
 	"mqfm-backend/internal/utils"
 
@@ -20,9 +21,7 @@ func NewUserLikeController(s *likeService.UserLikeService) *UserLikeController {
 }
 
 func (ctrl *UserLikeController) Like(c *gin.Context) {
-	var input struct {
-		AudioID uint `json:"audio_id" binding:"required"`
-	}
+	var input likesDto.LikeRequest
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid input", err.Error())
@@ -35,12 +34,20 @@ func (ctrl *UserLikeController) Like(c *gin.Context) {
 		return
 	}
 
-	if err := ctrl.service.LikeAudio(userID, input.AudioID); err != nil {
+	like, err := ctrl.service.LikeAudio(userID, input)
+	if err != nil {
 		utils.ErrorResponse(c, http.StatusBadRequest, "Failed to like audio", err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusCreated, "Audio liked successfully", nil)
+	response := likesDto.LikeResponse{
+		ID:        like.ID,
+		UserID:    like.UserID,
+		AudioID:   like.AudioID,
+		CreatedAt: like.CreatedAt,
+	}
+
+	utils.SuccessResponse(c, http.StatusCreated, "Audio liked successfully", response)
 }
 
 func (ctrl *UserLikeController) Unlike(c *gin.Context) {
@@ -78,5 +85,15 @@ func (ctrl *UserLikeController) GetLikes(c *gin.Context) {
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "Liked audios retrieved", likes)
+	var response []likesDto.LikeResponse
+	for _, like := range likes {
+		response = append(response, likesDto.LikeResponse{
+			ID:        like.ID,
+			UserID:    like.UserID,
+			AudioID:   like.AudioID,
+			CreatedAt: like.CreatedAt,
+		})
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Liked audios retrieved", response)
 }

@@ -13,22 +13,27 @@ import (
 	adminController "mqfm-backend/internal/controllers/auth/admin"
 	userController "mqfm-backend/internal/controllers/auth/user"
 	catAdminController "mqfm-backend/internal/controllers/category/admin"
+	historyUserController "mqfm-backend/internal/controllers/history/user"
 	likeUserController "mqfm-backend/internal/controllers/likes/user"
 	lsController "mqfm-backend/internal/controllers/livestream"
 	playlistUserController "mqfm-backend/internal/controllers/playlist/user"
 	audioAdminController "mqfm-backend/internal/controllers/podcast/audio/admin"
 	lsModel "mqfm-backend/internal/models/livestream"
+	userAuthRepo "mqfm-backend/internal/repositories/auth/user"
+	catAdminRepo "mqfm-backend/internal/repositories/category/admin"
+	historyRepo "mqfm-backend/internal/repositories/history/user"
+	likeRepo "mqfm-backend/internal/repositories/likes/user"
+	audioAdminRepo "mqfm-backend/internal/repositories/podcast/audio/admin"
 	"mqfm-backend/internal/routes"
 	adminAuthService "mqfm-backend/internal/services/auth/admin"
-	userAuthRepo "mqfm-backend/internal/repositories/auth/user"
 	userAuthService "mqfm-backend/internal/services/auth/user"
 	catAdminService "mqfm-backend/internal/services/category/admin"
+	historyUserService "mqfm-backend/internal/services/history/user"
 	likeUserService "mqfm-backend/internal/services/likes/user"
 	lsService "mqfm-backend/internal/services/livestream"
 	playlistUserService "mqfm-backend/internal/services/playlist/user"
 	audioAdminService "mqfm-backend/internal/services/podcast/audio/admin"
 	"mqfm-backend/internal/utils"
-
 )
 
 func main() {
@@ -56,18 +61,26 @@ func main() {
 	userService := userAuthService.NewUserAuthService(userRepository)
 	userCtrl := userController.NewUserAuthController(userService)
 
-	catRepo := catAdminService.NewAdminCategoryService(db)
-	catCtrl := catAdminController.NewAdminCategoryController(catRepo)
+	categoryRepository := catAdminRepo.NewCategoryRepository(db)
+	categoryService := catAdminService.NewAdminCategoryService(categoryRepository)
+	catCtrl := catAdminController.NewAdminCategoryController(categoryService)
 
-	audioRepo := audioAdminService.NewAdminAudioService(db)
-	audioCtrl := audioAdminController.NewAdminAudioController(audioRepo, catRepo)
+	audioRepository := audioAdminRepo.NewAudioRepository(db)
+	audioService := audioAdminService.NewAdminAudioService(audioRepository)
+
+	historyRepository := historyRepo.NewHistoryRepository(db)
+	historyService := historyUserService.NewUserHistoryService(historyRepository)
+
+	audioCtrl := audioAdminController.NewAdminAudioController(audioService, historyService)
 
 	playlistRepo := playlistUserService.NewUserPlaylistService(db)
 	playlistCtrl := playlistUserController.NewUserPlaylistController(playlistRepo)
 
-	likeRepo := likeUserService.NewUserLikeService(db)
-	likeCtrl := likeUserController.NewUserLikeController(likeRepo)
+	likeRepository := likeRepo.NewLikeRepository(db)
+	likeService := likeUserService.NewUserLikeService(likeRepository)
+	likeCtrl := likeUserController.NewUserLikeController(likeService)
 
+	historyCtrl := historyUserController.NewUserHistoryController(historyService)
 	mqfmChannelID := "UCwa0rj5KY6bWoVzJtgoiaDw"
 	lsRepo := lsService.NewLiveStreamService(db, youtubeAPIKey)
 	lsCtrl := lsController.NewLiveStreamController(lsRepo)
@@ -82,7 +95,7 @@ func main() {
 		}
 	}()
 
-	routes.SetupRoutes(r, adminCtrl, userCtrl, catCtrl, audioCtrl, playlistCtrl, likeCtrl, lsCtrl)
+	routes.SetupRoutes(r, adminCtrl, userCtrl, catCtrl, audioCtrl, playlistCtrl, likeCtrl, historyCtrl, lsCtrl)
 
 	port := os.Getenv("PORT")
 	if port == "" {
