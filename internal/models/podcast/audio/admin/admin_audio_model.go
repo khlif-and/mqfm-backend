@@ -10,10 +10,14 @@ import (
 type Audio struct {
 	ID          uint           `gorm:"primaryKey" json:"id"`
 	Title       string         `gorm:"not null" json:"title"`
+	Artist      string         `json:"artist"`
 	Description string         `json:"description"`
-	AudioURL    string         `json:"audio_url"` 
+	FilePath    string         `json:"file_path"` // Renamed from AudioURL to match Service/DTO
+	Duration    int            `json:"duration"`
+	Status      string         `gorm:"default:active" json:"status"`
 	Thumbnail   string         `json:"thumbnail"`
 	CategoryID  uint           `json:"category_id"`
+	// Category    categoryModel.Category `gorm:"foreignKey:CategoryID" json:"category,omitempty"` // Circular import risk, handle carefully
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`

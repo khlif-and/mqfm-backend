@@ -1,12 +1,17 @@
 package user
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"mime/multipart"
+	"net/http"
+	"os"
+	"strings"
 
 	"golang.org/x/crypto/bcrypt"
 
-	"mqfm-backend/internal/dto/auth"
+	dto "mqfm-backend/internal/dto/auth"
 	userModel "mqfm-backend/internal/models/auth/user"
 	userRepo "mqfm-backend/internal/repositories/auth/user"
 	"mqfm-backend/internal/utils"
@@ -31,15 +36,6 @@ func (s *UserAuthService) Register(req dto.RegisterRequest, file *multipart.File
 	if file != nil {
 		filename := utils.GenerateUniqueFilename(file.Filename)
 		path := "uploads/profiles/" + filename
-		// Logic save file sebenarnya butuh context gin, 
-		// tapi idealnya service tidak bergantung Gin.
-		// Untuk simplicity MVC standard di Go (tanpa clean architecture strict banget),
-		// Service bisa terima multipart.FileHeader tapi butuh helper save.
-		// Kita akan buat utils.SaveFile di step selanjutnya utk decouple dari Gin Context jika perlu,
-		// TAPI karena Gin Context punya SaveUploadedFile yang mudah, 
-		// biasnaya di-pass filenya atau logic save tetap di controller wrapper.
-		// REQ User: "Logic simpan file idealnya digeser ke Service".
-		// Maka kita butuh cara save file manual di sini.
 		if err := utils.SaveUploadedFile(file, path); err != nil {
 			utils.Log.Error("Failed to save profile picture: " + err.Error())
 		} else {
@@ -53,6 +49,7 @@ func (s *UserAuthService) Register(req dto.RegisterRequest, file *multipart.File
 		Password:       string(hashedPassword),
 		ProfilePicture: profilePicturePath,
 		Role:           "user",
+		Provider:       "local",
 	}
 
 	if err := s.repo.Create(&user); err != nil {
@@ -77,6 +74,95 @@ func (s *UserAuthService) Login(req dto.LoginRequest) (string, *userModel.User, 
 	token, err := utils.GenerateToken(user.ID, "user")
 	if err != nil {
 		utils.Log.Error("Failed to generate user JWT token: " + err.Error())
+		return "", nil, err
+	}
+
+	return token, user, nil
+}
+
+type googleTokenInfo struct {
+	Sub           string `json:"sub"`
+	Email         string `json:"email"`
+	EmailVerified string `json:"email_verified"`
+	Name          string `json:"name"`
+	Picture       string `json:"picture"`
+	Aud           string `json:"aud"`
+}
+
+func (s *UserAuthService) GoogleLogin(req dto.GoogleLoginRequest) (string, *userModel.User, error) {
+	resp, err := http.Get("https://oauth2.googleapis.com/tokeninfo?id_token=" + req.IDToken)
+	if err != nil {
+		return "", nil, errors.New("failed to verify google token")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", nil, errors.New("invalid google token")
+	}
+
+	var tokenInfo googleTokenInfo
+	if err := json.NewDecoder(resp.Body).Decode(&tokenInfo); err != nil {
+		return "", nil, errors.New("failed to parse google token info")
+	}
+
+	clientIDs := strings.Split(os.Getenv("GOOGLE_CLIENT_ID"), ",")
+	validAud := false
+	for _, id := range clientIDs {
+		if strings.TrimSpace(id) == tokenInfo.Aud {
+			validAud = true
+			break
+		}
+	}
+	if !validAud {
+		return "", nil, errors.New("invalid google token audience")
+	}
+
+	if tokenInfo.EmailVerified != "true" {
+		return "", nil, errors.New("google email not verified")
+	}
+
+	user, err := s.repo.FindByProviderID("google", tokenInfo.Sub)
+	if err != nil {
+		username := tokenInfo.Name
+		if username == "" {
+			username = strings.Split(tokenInfo.Email, "@")[0]
+		}
+
+		existingUser, emailErr := s.repo.FindByEmail(tokenInfo.Email)
+		if emailErr == nil {
+			existingUser.Provider = "google"
+			existingUser.ProviderID = tokenInfo.Sub
+			if tokenInfo.Picture != "" && existingUser.ProfilePicture == "" {
+				existingUser.ProfilePicture = tokenInfo.Picture
+			}
+			updates := map[string]interface{}{
+				"provider":    "google",
+				"provider_id": tokenInfo.Sub,
+			}
+			if tokenInfo.Picture != "" && existingUser.ProfilePicture == "" {
+				updates["profile_picture"] = tokenInfo.Picture
+			}
+			s.repo.Update(existingUser.ID, updates)
+			user = existingUser
+		} else {
+			newUser := userModel.User{
+				Username:       username,
+				Email:          tokenInfo.Email,
+				ProfilePicture: tokenInfo.Picture,
+				Role:           "user",
+				Provider:       "google",
+				ProviderID:     tokenInfo.Sub,
+			}
+			if err := s.repo.Create(&newUser); err != nil {
+				return "", nil, fmt.Errorf("failed to create google user: %w", err)
+			}
+			user = &newUser
+		}
+	}
+
+	token, err := utils.GenerateToken(user.ID, "user")
+	if err != nil {
+		utils.Log.Error("Failed to generate JWT token for google user: " + err.Error())
 		return "", nil, err
 	}
 

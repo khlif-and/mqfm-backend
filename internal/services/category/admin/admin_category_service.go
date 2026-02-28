@@ -2,74 +2,85 @@ package admin
 
 import (
 	"errors"
+	"mime/multipart"
 
-	"gorm.io/gorm"
-
+	categoryDto "mqfm-backend/internal/dto/category"
 	categoryModel "mqfm-backend/internal/models/category/admin"
-
+	categoryRepo "mqfm-backend/internal/repositories/category/admin"
+	"mqfm-backend/internal/utils"
 )
 
 type AdminCategoryService struct {
-	db *gorm.DB
+	repo categoryRepo.CategoryRepository
 }
 
-func NewAdminCategoryService(db *gorm.DB) *AdminCategoryService {
-	return &AdminCategoryService{db: db}
+func NewAdminCategoryService(repo categoryRepo.CategoryRepository) *AdminCategoryService {
+	return &AdminCategoryService{repo: repo}
 }
 
-func (s *AdminCategoryService) Create(category *categoryModel.Category) error {
-	return s.db.Create(category).Error
-}
-
-func (s *AdminCategoryService) FindAll() ([]categoryModel.Category, error) {
-	var categories []categoryModel.Category
-	if err := s.db.Find(&categories).Error; err != nil {
-		return nil, err
-	}
-	return categories, nil
-}
-
-func (s *AdminCategoryService) FindByID(id uint) (*categoryModel.Category, error) {
-	var category categoryModel.Category
-	if err := s.db.First(&category, id).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("category not found")
+func (s *AdminCategoryService) Create(req categoryDto.CreateCategoryRequest, file *multipart.FileHeader) (*categoryModel.Category, error) {
+	var imagePath string
+	if file != nil {
+		filename := utils.GenerateUniqueFilename(file.Filename)
+		path := "uploads/categories/" + filename
+		if err := utils.SaveUploadedFile(file, path); err != nil {
+			utils.Log.Error("Failed to save category image: " + err.Error())
+		} else {
+			imagePath = path
 		}
+	}
+
+	category := categoryModel.Category{
+		Name:  req.Name,
+		Image: imagePath,
+	}
+
+	if err := s.repo.Create(&category); err != nil {
 		return nil, err
 	}
+
 	return &category, nil
 }
 
-func (s *AdminCategoryService) Update(id uint, updates map[string]interface{}) (*categoryModel.Category, error) {
-	if err := s.db.Model(&categoryModel.Category{}).Where("id = ?", id).Updates(updates).Error; err != nil {
+func (s *AdminCategoryService) FindAll() ([]categoryModel.Category, error) {
+	return s.repo.FindAll()
+}
+
+func (s *AdminCategoryService) FindByID(id uint) (*categoryModel.Category, error) {
+	return s.repo.FindByID(id)
+}
+
+func (s *AdminCategoryService) Update(id uint, req categoryDto.UpdateCategoryRequest, file *multipart.FileHeader) (*categoryModel.Category, error) {
+	updates := make(map[string]interface{})
+	if req.Name != "" {
+		updates["name"] = req.Name
+	}
+
+	if file != nil {
+		filename := utils.GenerateUniqueFilename(file.Filename)
+		path := "uploads/categories/" + filename
+		if err := utils.SaveUploadedFile(file, path); err != nil {
+			utils.Log.Error("Failed to save category image: " + err.Error())
+		} else {
+			updates["image"] = path
+		}
+	}
+
+	if len(updates) == 0 {
+		return nil, errors.New("no updates provided")
+	}
+
+	if err := s.repo.Update(id, updates); err != nil {
 		return nil, err
 	}
 
-	var updatedCategory categoryModel.Category
-	if err := s.db.First(&updatedCategory, id).Error; err != nil {
-		return nil, err
-	}
-
-	return &updatedCategory, nil
+	return s.repo.FindByID(id)
 }
 
 func (s *AdminCategoryService) Delete(id uint) error {
-	var category categoryModel.Category
-	if err := s.db.First(&category, id).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return errors.New("category not found")
-		}
-		return err
-	}
-
-	return s.db.Delete(&category).Error
+	return s.repo.Delete(id)
 }
 
 func (s *AdminCategoryService) Search(query string) ([]categoryModel.Category, error) {
-	var categories []categoryModel.Category
-	searchQuery := "%" + query + "%"
-	if err := s.db.Where("name LIKE ? OR description LIKE ?", searchQuery, searchQuery).Find(&categories).Error; err != nil {
-		return nil, err
-	}
-	return categories, nil
+	return s.repo.Search(query)
 }

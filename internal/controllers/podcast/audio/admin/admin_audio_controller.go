@@ -1,120 +1,57 @@
 package admin
 
 import (
-	"fmt"
-	"mime/multipart"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
 
-	audioModel "mqfm-backend/internal/models/podcast/audio/admin"
-	categoryService "mqfm-backend/internal/services/category/admin" // Import Service Category
+	audioDto "mqfm-backend/internal/dto/audio"
+	historyDto "mqfm-backend/internal/dto/history"
+	historyService "mqfm-backend/internal/services/history/user"
 	audioService "mqfm-backend/internal/services/podcast/audio/admin"
 	"mqfm-backend/internal/utils"
-
 )
 
 type AdminAudioController struct {
-	service         *audioService.AdminAudioService
-	categoryService *categoryService.AdminCategoryService // Tambahkan field ini
+	service        *audioService.AdminAudioService
+	historyService *historyService.UserHistoryService
 }
 
-// Update Constructor: Menerima Category Service juga
-func NewAdminAudioController(s *audioService.AdminAudioService, cs *categoryService.AdminCategoryService) *AdminAudioController {
-	return &AdminAudioController{
-		service:         s,
-		categoryService: cs,
-	}
+func NewAdminAudioController(s *audioService.AdminAudioService, hs *historyService.UserHistoryService) *AdminAudioController {
+	return &AdminAudioController{service: s, historyService: hs}
 }
 
 func (ctrl *AdminAudioController) Create(c *gin.Context) {
-	var input struct {
-		Title         string                `form:"title" binding:"required"`
-		Description   string                `form:"description"`
-		CategoryID    uint                  `form:"category_id"`
-		AudioFile     *multipart.FileHeader `form:"audio_file"`
-		ThumbnailFile *multipart.FileHeader `form:"thumbnail_file"`
-	}
+	var input audioDto.CreateAudioRequest
 
 	if err := c.ShouldBind(&input); err != nil {
 		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid input data", err.Error())
 		return
 	}
 
-	// --- VALIDASI KATEGORI ---
-	// Jika CategoryID diisi (tidak 0), cek apakah ada di database
-	if input.CategoryID != 0 {
-		if _, err := ctrl.categoryService.FindByID(input.CategoryID); err != nil {
-			utils.ErrorResponse(c, http.StatusNotFound, "Category ID not found", err.Error())
-			return
-		}
-	}
-	// -------------------------
+	file, _ := c.FormFile("file")
 
-	pwd, _ := os.Getwd()
-	fmt.Println("DEBUG: Aplikasi berjalan di:", pwd)
-
-	var audioPathDB string
-	if input.AudioFile != nil {
-		uploadDir := filepath.Join(pwd, "uploads", "audios")
-		if err := os.MkdirAll(uploadDir, 0755); err != nil {
-			utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to create audio directory", err.Error())
-			return
-		}
-
-		audioFilename := fmt.Sprintf("%d_%s", time.Now().Unix(), input.AudioFile.Filename)
-		fullSavePath := filepath.Join(uploadDir, audioFilename)
-
-		fmt.Println("DEBUG: Menyimpan Audio ke:", fullSavePath)
-
-		if err := c.SaveUploadedFile(input.AudioFile, fullSavePath); err != nil {
-			utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to upload audio file", err.Error())
-			return
-		}
-
-		audioPathDB = "uploads/audios/" + audioFilename
-	}
-
-	var thumbnailPathDB string
-	if input.ThumbnailFile != nil {
-		uploadDir := filepath.Join(pwd, "uploads", "thumbnails")
-		if err := os.MkdirAll(uploadDir, 0755); err != nil {
-			utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to create thumbnail directory", err.Error())
-			return
-		}
-
-		thumbFilename := fmt.Sprintf("%d_%s", time.Now().Unix(), input.ThumbnailFile.Filename)
-		fullSavePath := filepath.Join(uploadDir, thumbFilename)
-
-		fmt.Println("DEBUG: Menyimpan Thumbnail ke:", fullSavePath)
-
-		if err := c.SaveUploadedFile(input.ThumbnailFile, fullSavePath); err != nil {
-			utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to upload thumbnail", err.Error())
-			return
-		}
-
-		thumbnailPathDB = "uploads/thumbnails/" + thumbFilename
-	}
-
-	audio := audioModel.Audio{
-		Title:       input.Title,
-		Description: input.Description,
-		AudioURL:    audioPathDB,
-		Thumbnail:   thumbnailPathDB,
-		CategoryID:  input.CategoryID,
-	}
-
-	if err := ctrl.service.Create(&audio); err != nil {
+	audio, err := ctrl.service.Create(input, file)
+	if err != nil {
 		utils.Log.Error("Audio creation error: " + err.Error())
 		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to create audio", err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusCreated, "Audio created successfully", audio)
+	response := audioDto.AudioResponse{
+		ID:         audio.ID,
+		Title:      audio.Title,
+		Artist:     audio.Artist,
+		FilePath:   audio.FilePath,
+		Duration:   audio.Duration,
+		Status:     audio.Status,
+		CategoryID: audio.CategoryID,
+		CreatedAt:  audio.CreatedAt,
+		UpdatedAt:  audio.UpdatedAt,
+	}
+
+	utils.SuccessResponse(c, http.StatusCreated, "Audio created successfully", response)
 }
 
 func (ctrl *AdminAudioController) FindAll(c *gin.Context) {
@@ -124,7 +61,22 @@ func (ctrl *AdminAudioController) FindAll(c *gin.Context) {
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "Audios retrieved successfully", audios)
+	var response []audioDto.AudioResponse
+	for _, audio := range audios {
+		response = append(response, audioDto.AudioResponse{
+			ID:         audio.ID,
+			Title:      audio.Title,
+			Artist:     audio.Artist,
+			FilePath:   audio.FilePath,
+			Duration:   audio.Duration,
+			Status:     audio.Status,
+			CategoryID: audio.CategoryID,
+			CreatedAt:  audio.CreatedAt,
+			UpdatedAt:  audio.UpdatedAt,
+		})
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Audios retrieved successfully", response)
 }
 
 func (ctrl *AdminAudioController) FindByID(c *gin.Context) {
@@ -141,7 +93,25 @@ func (ctrl *AdminAudioController) FindByID(c *gin.Context) {
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "Audio retrieved successfully", audio)
+	userID := utils.GetUserID(c)
+	if userID != 0 {
+		req := historyDto.HistoryRequest{AudioID: uint(id)}
+		_ = ctrl.historyService.RecordPlay(userID, req)
+	}
+
+	response := audioDto.AudioResponse{
+		ID:         audio.ID,
+		Title:      audio.Title,
+		Artist:     audio.Artist,
+		FilePath:   audio.FilePath,
+		Duration:   audio.Duration,
+		Status:     audio.Status,
+		CategoryID: audio.CategoryID,
+		CreatedAt:  audio.CreatedAt,
+		UpdatedAt:  audio.UpdatedAt,
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Audio retrieved successfully", response)
 }
 
 func (ctrl *AdminAudioController) Update(c *gin.Context) {
@@ -152,84 +122,34 @@ func (ctrl *AdminAudioController) Update(c *gin.Context) {
 		return
 	}
 
-	var input struct {
-		Title         string                `form:"title"`
-		Description   string                `form:"description"`
-		CategoryID    uint                  `form:"category_id"`
-		AudioFile     *multipart.FileHeader `form:"audio_file"`
-		ThumbnailFile *multipart.FileHeader `form:"thumbnail_file"`
-	}
-
+	var input audioDto.UpdateAudioRequest
 	if err := c.ShouldBind(&input); err != nil {
 		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid update data", err.Error())
 		return
 	}
 
-	// --- VALIDASI KATEGORI (UPDATE) ---
-	if input.CategoryID != 0 {
-		if _, err := ctrl.categoryService.FindByID(input.CategoryID); err != nil {
-			utils.ErrorResponse(c, http.StatusNotFound, "Category ID not found", err.Error())
-			return
-		}
-	}
-	// ----------------------------------
+	file, _ := c.FormFile("file")
 
-	updates := make(map[string]interface{})
-
-	if input.Title != "" {
-		updates["title"] = input.Title
-	}
-	if input.Description != "" {
-		updates["description"] = input.Description
-	}
-	if input.CategoryID != 0 {
-		updates["category_id"] = input.CategoryID
-	}
-
-	pwd, _ := os.Getwd()
-
-	if input.AudioFile != nil {
-		uploadDir := filepath.Join(pwd, "uploads", "audios")
-		if err := os.MkdirAll(uploadDir, 0755); err != nil {
-			utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to create audio directory", err.Error())
-			return
-		}
-
-		audioFilename := fmt.Sprintf("%d_%s", time.Now().Unix(), input.AudioFile.Filename)
-		fullSavePath := filepath.Join(uploadDir, audioFilename)
-
-		if err := c.SaveUploadedFile(input.AudioFile, fullSavePath); err != nil {
-			utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to upload audio file", err.Error())
-			return
-		}
-		updates["audio_url"] = "uploads/audios/" + audioFilename
-	}
-
-	if input.ThumbnailFile != nil {
-		uploadDir := filepath.Join(pwd, "uploads", "thumbnails")
-		if err := os.MkdirAll(uploadDir, 0755); err != nil {
-			utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to create thumbnail directory", err.Error())
-			return
-		}
-
-		thumbFilename := fmt.Sprintf("%d_%s", time.Now().Unix(), input.ThumbnailFile.Filename)
-		fullSavePath := filepath.Join(uploadDir, thumbFilename)
-
-		if err := c.SaveUploadedFile(input.ThumbnailFile, fullSavePath); err != nil {
-			utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to upload thumbnail", err.Error())
-			return
-		}
-		updates["thumbnail"] = "uploads/thumbnails/" + thumbFilename
-	}
-
-	updatedAudio, err := ctrl.service.Update(uint(id), updates)
+	updatedAudio, err := ctrl.service.Update(uint(id), input, file)
 	if err != nil {
 		utils.Log.Error("Audio update error: " + err.Error())
 		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to update audio", err.Error())
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "Audio updated successfully", updatedAudio)
+	response := audioDto.AudioResponse{
+		ID:         updatedAudio.ID,
+		Title:      updatedAudio.Title,
+		Artist:     updatedAudio.Artist,
+		FilePath:   updatedAudio.FilePath,
+		Duration:   updatedAudio.Duration,
+		Status:     updatedAudio.Status,
+		CategoryID: updatedAudio.CategoryID,
+		CreatedAt:  updatedAudio.CreatedAt,
+		UpdatedAt:  updatedAudio.UpdatedAt,
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Audio updated successfully", response)
 }
 
 func (ctrl *AdminAudioController) Delete(c *gin.Context) {
@@ -251,7 +171,7 @@ func (ctrl *AdminAudioController) Delete(c *gin.Context) {
 
 func (ctrl *AdminAudioController) Search(c *gin.Context) {
 	query := c.Query("q")
-	
+
 	if query == "" {
 		utils.ErrorResponse(c, http.StatusBadRequest, "Search keyword is required", nil)
 		return
@@ -263,5 +183,20 @@ func (ctrl *AdminAudioController) Search(c *gin.Context) {
 		return
 	}
 
-	utils.SuccessResponse(c, http.StatusOK, "Audios found successfully", audios)
+	var response []audioDto.AudioResponse
+	for _, audio := range audios {
+		response = append(response, audioDto.AudioResponse{
+			ID:         audio.ID,
+			Title:      audio.Title,
+			Artist:     audio.Artist,
+			FilePath:   audio.FilePath,
+			Duration:   audio.Duration,
+			Status:     audio.Status,
+			CategoryID: audio.CategoryID,
+			CreatedAt:  audio.CreatedAt,
+			UpdatedAt:  audio.UpdatedAt,
+		})
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Audios found successfully", response)
 }

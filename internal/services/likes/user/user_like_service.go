@@ -3,47 +3,44 @@ package user
 import (
 	"errors"
 
-	"gorm.io/gorm"
-
+	likesDto "mqfm-backend/internal/dto/likes"
 	likeModel "mqfm-backend/internal/models/likes/user"
-
+	likeRepo "mqfm-backend/internal/repositories/likes/user"
 )
 
 type UserLikeService struct {
-	db *gorm.DB
+	repo likeRepo.LikeRepository
 }
 
-func NewUserLikeService(db *gorm.DB) *UserLikeService {
-	return &UserLikeService{db: db}
+func NewUserLikeService(repo likeRepo.LikeRepository) *UserLikeService {
+	return &UserLikeService{repo: repo}
 }
 
-func (s *UserLikeService) LikeAudio(userID uint, audioID uint) error {
-	var count int64
-	s.db.Model(&likeModel.Like{}).Where("user_id = ? AND audio_id = ?", userID, audioID).Count(&count)
-	if count > 0 {
-		return errors.New("audio already liked")
+func (s *UserLikeService) LikeAudio(userID uint, req likesDto.LikeRequest) (*likeModel.Like, error) {
+	exists, err := s.repo.Exists(userID, req.AudioID)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return nil, errors.New("audio already liked")
 	}
 
 	like := likeModel.Like{
 		UserID:  userID,
-		AudioID: audioID,
+		AudioID: req.AudioID,
 	}
-	return s.db.Create(&like).Error
+
+	if err := s.repo.Create(&like); err != nil {
+		return nil, err
+	}
+
+	return &like, nil
 }
 
 func (s *UserLikeService) UnlikeAudio(userID uint, audioID uint) error {
-	result := s.db.Where("user_id = ? AND audio_id = ?", userID, audioID).Delete(&likeModel.Like{})
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return errors.New("like not found")
-	}
-	return nil
+	return s.repo.Delete(userID, audioID)
 }
 
 func (s *UserLikeService) GetLikedAudios(userID uint) ([]likeModel.Like, error) {
-	var likes []likeModel.Like
-	err := s.db.Where("user_id = ?", userID).Preload("Audio").Find(&likes).Error
-	return likes, err
+	return s.repo.FindByUser(userID)
 }
