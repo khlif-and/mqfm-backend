@@ -121,6 +121,14 @@ func (s *UserAuthService) GoogleLogin(req dto.GoogleLoginRequest) (string, *user
 		return "", nil, errors.New("google email not verified")
 	}
 
+	var localProfilePic string
+	if tokenInfo.Picture != "" {
+		downloadedPath, downloadErr := utils.DownloadImage(tokenInfo.Picture, "uploads/profiles")
+		if downloadErr == nil && downloadedPath != "" {
+			localProfilePic = downloadedPath
+		}
+	}
+
 	user, err := s.repo.FindByProviderID("google", tokenInfo.Sub)
 	if err != nil {
 		username := tokenInfo.Name
@@ -130,25 +138,25 @@ func (s *UserAuthService) GoogleLogin(req dto.GoogleLoginRequest) (string, *user
 
 		existingUser, emailErr := s.repo.FindByEmail(tokenInfo.Email)
 		if emailErr == nil {
-			existingUser.Provider = "google"
-			existingUser.ProviderID = tokenInfo.Sub
-			if tokenInfo.Picture != "" && existingUser.ProfilePicture == "" {
-				existingUser.ProfilePicture = tokenInfo.Picture
-			}
 			updates := map[string]interface{}{
 				"provider":    "google",
 				"provider_id": tokenInfo.Sub,
 			}
-			if tokenInfo.Picture != "" && existingUser.ProfilePicture == "" {
-				updates["profile_picture"] = tokenInfo.Picture
+			
+			existingUser.Provider = "google"
+			existingUser.ProviderID = tokenInfo.Sub
+			if localProfilePic != "" && existingUser.ProfilePicture == "" {
+				existingUser.ProfilePicture = localProfilePic
+				updates["profile_picture"] = localProfilePic
 			}
+			
 			s.repo.Update(existingUser.ID, updates)
 			user = existingUser
 		} else {
 			newUser := userModel.User{
 				Username:       username,
 				Email:          tokenInfo.Email,
-				ProfilePicture: tokenInfo.Picture,
+				ProfilePicture: localProfilePic,
 				Role:           "user",
 				Provider:       "google",
 				ProviderID:     tokenInfo.Sub,
@@ -158,6 +166,10 @@ func (s *UserAuthService) GoogleLogin(req dto.GoogleLoginRequest) (string, *user
 			}
 			user = &newUser
 		}
+	} else if user.ProfilePicture == "" && localProfilePic != "" {
+		// Just in case existing google user didn't have a profile picture yet
+		user.ProfilePicture = localProfilePic
+		s.repo.Update(user.ID, map[string]interface{}{"profile_picture": localProfilePic})
 	}
 
 	token, err := utils.GenerateToken(user.ID, "user")
