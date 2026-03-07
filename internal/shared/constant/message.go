@@ -110,6 +110,7 @@ const (
 	MsgGoogleAlreadyLinked = "Google account already linked"
 	MsgGoogleNotLinked    = "No Google account linked"
 	MsgGoogleNoPassword   = "Cannot unlink Google without setting a password first"
+	MsgGoogleEmailLocked  = "Email cannot be changed for Google-linked accounts"
 
 	MsgRecommendPopularOK      = "Popular content retrieved"
 	MsgRecommendMostListenedOK = "Most listened content retrieved"

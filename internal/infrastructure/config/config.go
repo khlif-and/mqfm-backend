@@ -22,7 +22,7 @@ type Config struct {
 	SMTPPort       string
 	SMTPUser       string
 	SMTPPassword   string
-	SMTPFrom       string
+	SMTPFromName   string
 }
 
 func Load() *Config {
@@ -41,9 +41,9 @@ func Load() *Config {
 		RedisPassword:  getEnv("REDIS_PASSWORD", ""),
 		SMTPHost:       getEnv("SMTP_HOST", "smtp.gmail.com"),
 		SMTPPort:       getEnv("SMTP_PORT", "587"),
-		SMTPUser:       getEnv("SMTP_USER", ""),
+		SMTPUser:       getEnv("SMTP_USER", "khalifsiregar123@gmail.com"),
 		SMTPPassword:   getEnv("SMTP_PASSWORD", ""),
-		SMTPFrom:       getEnv("SMTP_FROM", "MQFM <noreply@mqfm.com>"),
+		SMTPFromName:   getEnv("SMTP_FROM_NAME", "MQFM Apps"),
 	}
 }
 

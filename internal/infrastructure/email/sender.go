@@ -11,8 +11,9 @@ import (
 )
 
 type Sender struct {
-	dialer *gomail.Dialer
-	from   string
+	dialer   *gomail.Dialer
+	from     string
+	fromName string
 }
 
 func NewSender(cfg *config.Config) *Sender {
@@ -20,15 +21,16 @@ func NewSender(cfg *config.Config) *Sender {
 	dialer := gomail.NewDialer(cfg.SMTPHost, port, cfg.SMTPUser, cfg.SMTPPassword)
 
 	return &Sender{
-		dialer: dialer,
-		from:   cfg.SMTPFrom,
+		dialer:   dialer,
+		from:     cfg.SMTPUser,
+		fromName: cfg.SMTPFromName,
 	}
 }
 
 func (s *Sender) SendAsync(to string, subject string, body string) {
 	go func() {
 		m := gomail.NewMessage()
-		m.SetHeader("From", s.from)
+		m.SetAddressHeader("From", s.from, s.fromName)
 		m.SetHeader("To", to)
 		m.SetHeader("Subject", subject)
 		m.SetBody("text/html", body)

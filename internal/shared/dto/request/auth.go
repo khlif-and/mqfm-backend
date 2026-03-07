@@ -28,4 +28,5 @@ type GoogleLoginRequest struct {
 
 type UpdateUserRequest struct {
 	Username string `form:"username"`
+	Email    string `form:"email"`
 }

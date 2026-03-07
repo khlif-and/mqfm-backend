@@ -19,12 +19,13 @@ import (
 )
 
 type userAuthService struct {
-	repo    port.UserRepository
-	otpRepo port.OTPRepository
+	repo       port.UserRepository
+	otpRepo    port.OTPRepository
+	otpService port.OTPService
 }
 
-func NewUserAuthService(repo port.UserRepository, otpRepo port.OTPRepository) port.UserAuthService {
-	return &userAuthService{repo: repo, otpRepo: otpRepo}
+func NewUserAuthService(repo port.UserRepository, otpRepo port.OTPRepository, otpSvc port.OTPService) port.UserAuthService {
+	return &userAuthService{repo: repo, otpRepo: otpRepo, otpService: otpSvc}
 }
 
 func (s *userAuthService) Register(req request.UserRegisterRequest, file *multipart.FileHeader) (*entity.User, error) {
@@ -58,6 +59,10 @@ func (s *userAuthService) Register(req request.UserRegisterRequest, file *multip
 	if err := s.repo.Create(&user); err != nil {
 		return nil, err
 	}
+
+	go func() {
+		_ = s.otpService.SendOTP(user.Email)
+	}()
 
 	return &user, nil
 }
@@ -151,6 +156,10 @@ func (s *userAuthService) GoogleLogin(req request.GoogleLoginRequest) (string, *
 				return "", nil, fmt.Errorf("failed to create google user: %w", err)
 			}
 			user = &newUser
+
+			go func() {
+				_ = s.otpService.SendOTP(newUser.Email)
+			}()
 		}
 	} else {
 		updates := map[string]interface{}{"username": username, "email_verified": true}
@@ -233,6 +242,11 @@ func (s *userAuthService) UnlinkGoogle(userID uint) (*entity.User, error) {
 }
 
 func (s *userAuthService) UpdateUser(id uint, req request.UpdateUserRequest, file *multipart.FileHeader) (*entity.User, error) {
+	user, err := s.repo.FindByID(id)
+	if err != nil {
+		return nil, err
+	}
+
 	updates := make(map[string]interface{})
 	if req.Username != "" {
 		updates["username"] = req.Username
@@ -246,6 +260,10 @@ func (s *userAuthService) UpdateUser(id uint, req request.UpdateUserRequest, fil
 		} else {
 			updates["profile_picture"] = path
 		}
+	}
+
+	if req.Email != "" && user.Provider != "google" {
+		updates["email"] = req.Email
 	}
 
 	if len(updates) == 0 {
