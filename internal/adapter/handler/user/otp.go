@@ -43,16 +43,17 @@ func (h *OTPHandler) VerifyOTP(c *gin.Context) {
 		return
 	}
 
-	if err := h.otpService.VerifyOTP(input.Email, input.Code); err != nil {
+	user, err := h.otpService.VerifyOTP(input.Email, input.Code)
+	if err != nil {
 		resp.Error(c, http.StatusBadRequest, constant.MsgOTPVerifyFail, err.Error())
 		return
 	}
 
-	user, err := h.userService.GetUserByID(security.GetUserID(c))
-	if err == nil && user.Email == input.Email {
-		resp.Success(c, http.StatusOK, constant.MsgOTPVerifyOK, toUserResponse(user, ""))
+	token, err := security.GenerateToken(user.ID, constant.RoleUser)
+	if err != nil {
+		resp.Error(c, http.StatusInternalServerError, "Failed to generate token", err.Error())
 		return
 	}
 
-	resp.Success(c, http.StatusOK, constant.MsgOTPVerifyOK, nil)
+	resp.Success(c, http.StatusOK, constant.MsgOTPVerifyOK, toUserResponse(user, token))
 }

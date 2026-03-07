@@ -41,7 +41,7 @@ func NewContainer(db *gorm.DB, redisClient *redis.Client, cfg *config.Config) *C
 	playlistSvc := service.NewPlaylistService(playlistRepo)
 	likeSvc := service.NewLikeService(likeRepo)
 	historySvc := service.NewHistoryService(historyRepo)
-	otpSvc := service.NewOTPService(otpRepo, emailSender)
+	otpSvc := service.NewOTPService(otpRepo, userRepo, emailSender)
 	userAuthSvc := service.NewUserAuthService(userRepo, otpRepo, otpSvc)
 	recommendationSvc := service.NewRecommendationService(audioRepo, audioScoreRepo, historyRepo, likeRepo)
 

@@ -15,12 +15,14 @@ import (
 
 type otpService struct {
 	otpRepo      port.OTPRepository
+	userRepo     port.UserRepository
 	emailService port.EmailService
 }
 
-func NewOTPService(otpRepo port.OTPRepository, emailSvc port.EmailService) port.OTPService {
+func NewOTPService(otpRepo port.OTPRepository, userRepo port.UserRepository, emailSvc port.EmailService) port.OTPService {
 	return &otpService{
 		otpRepo:      otpRepo,
+		userRepo:     userRepo,
 		emailService: emailSvc,
 	}
 }
@@ -61,21 +63,35 @@ func (s *otpService) SendOTP(email string) error {
 	return nil
 }
 
-func (s *otpService) VerifyOTP(email string, code string) error {
+func (s *otpService) VerifyOTP(email string, code string) (*entity.User, error) {
 	otp, err := s.otpRepo.FindLatestByEmail(email)
 	if err != nil {
-		return errors.New(constant.MsgOTPInvalid)
+		return nil, errors.New(constant.MsgOTPInvalid)
 	}
 
 	if time.Now().After(otp.ExpiresAt) {
-		return errors.New(constant.MsgOTPExpired)
+		return nil, errors.New(constant.MsgOTPExpired)
 	}
 
 	if otp.Code != code {
-		return errors.New(constant.MsgOTPInvalid)
+		return nil, errors.New(constant.MsgOTPInvalid)
 	}
 
-	return s.otpRepo.MarkVerified(otp.ID)
+	if err := s.otpRepo.MarkVerified(otp.ID); err != nil {
+		return nil, err
+	}
+
+	user, err := s.userRepo.FindByEmail(email)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.userRepo.Update(user.ID, map[string]interface{}{"email_verified": true}); err != nil {
+		return nil, err
+	}
+	user.EmailVerified = true
+
+	return user, nil
 }
 
 func generateOTPCode() string {

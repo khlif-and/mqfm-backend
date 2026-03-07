@@ -65,7 +65,7 @@ type HistoryService interface {
 
 type OTPService interface {
 	SendOTP(email string) error
-	VerifyOTP(email string, code string) error
+	VerifyOTP(email string, code string) (*entity.User, error)
 }
 
 type EmailService interface {

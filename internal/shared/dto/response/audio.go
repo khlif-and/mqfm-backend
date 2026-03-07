@@ -3,7 +3,7 @@ package response
 import "time"
 
 type AudioResponse struct {
-	ID            uint      `json:"id"`
+	ID            uint      `json:"audio_id"`
 	Title         string    `json:"title"`
 	Artist        string    `json:"artist"`
 	Description   string    `json:"description,omitempty"`

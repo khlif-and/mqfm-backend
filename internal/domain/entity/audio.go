@@ -7,7 +7,7 @@ import (
 )
 
 type Audio struct {
-	ID            uint           `gorm:"primaryKey" json:"id"`
+	ID            uint           `gorm:"primaryKey" json:"audio_id"`
 	Title         string         `gorm:"not null" json:"title"`
 	Artist        string         `json:"artist"`
 	Description   string         `json:"description"`
