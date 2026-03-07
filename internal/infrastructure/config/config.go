@@ -7,18 +7,22 @@ import (
 )
 
 type Config struct {
-	Port            string
-	DBUser          string
-	DBPassword      string
-	DBHost          string
-	DBPort          string
-	DBName          string
-	JWTSecret       string
-	YouTubeAPIKey   string
-	GoogleClientID  string
-	RedisAddr       string
-	RedisPassword   string
-	RedisDB         int
+	Port           string
+	DBUser         string
+	DBPassword     string
+	DBHost         string
+	DBPort         string
+	DBName         string
+	JWTSecret      string
+	GoogleClientID string
+	RedisAddr      string
+	RedisPassword  string
+	RedisDB        int
+	SMTPHost       string
+	SMTPPort       string
+	SMTPUser       string
+	SMTPPassword   string
+	SMTPFrom       string
 }
 
 func Load() *Config {
@@ -32,10 +36,14 @@ func Load() *Config {
 		DBPort:         getEnv("DB_PORT", "3306"),
 		DBName:         getEnv("DB_NAME", ""),
 		JWTSecret:      getEnv("JWT_SECRET", "mqfm_secret_key_default"),
-		YouTubeAPIKey:  getEnv("YOUTUBE_API_KEY", ""),
 		GoogleClientID: getEnv("GOOGLE_CLIENT_ID", ""),
 		RedisAddr:      getEnv("REDIS_ADDR", "localhost:6379"),
 		RedisPassword:  getEnv("REDIS_PASSWORD", ""),
+		SMTPHost:       getEnv("SMTP_HOST", "smtp.gmail.com"),
+		SMTPPort:       getEnv("SMTP_PORT", "587"),
+		SMTPUser:       getEnv("SMTP_USER", ""),
+		SMTPPassword:   getEnv("SMTP_PASSWORD", ""),
+		SMTPFrom:       getEnv("SMTP_FROM", "MQFM <noreply@mqfm.com>"),
 	}
 }
 

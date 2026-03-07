@@ -62,3 +62,30 @@ func (r *audioRepo) Search(query string) ([]entity.Audio, error) {
 	err := r.db.Where("title LIKE ? OR artist LIKE ?", "%"+query+"%", "%"+query+"%").Find(&audios).Error
 	return audios, err
 }
+
+func (r *audioRepo) FindByIDs(ids []uint) ([]entity.Audio, error) {
+	var audios []entity.Audio
+	if len(ids) == 0 {
+		return audios, nil
+	}
+	err := r.db.Where("id IN ?", ids).Find(&audios).Error
+	return audios, err
+}
+
+func (r *audioRepo) FindByArtist(artist string, limit int) ([]entity.Audio, error) {
+	var audios []entity.Audio
+	err := r.db.Where("artist LIKE ? AND status = 'active'", "%"+artist+"%").Limit(limit).Find(&audios).Error
+	return audios, err
+}
+
+func (r *audioRepo) FindByCategoryID(categoryID uint, limit int) ([]entity.Audio, error) {
+	var audios []entity.Audio
+	err := r.db.Where("category_id = ? AND status = 'active'", categoryID).Limit(limit).Find(&audios).Error
+	return audios, err
+}
+
+func (r *audioRepo) FindAllActive() ([]entity.Audio, error) {
+	var audios []entity.Audio
+	err := r.db.Where("status = 'active'").Find(&audios).Error
+	return audios, err
+}

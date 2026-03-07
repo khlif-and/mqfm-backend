@@ -120,6 +120,44 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	resp.Success(c, http.StatusOK, constant.MsgUserProfileOK, toUserResponse(u, ""))
 }
 
+func (h *AuthHandler) LinkGoogle(c *gin.Context) {
+	userID := security.GetUserID(c)
+	if userID == 0 {
+		resp.Error(c, http.StatusUnauthorized, constant.MsgUnauthorized, nil)
+		return
+	}
+
+	var input request.GoogleLoginRequest
+	if err := c.ShouldBindJSON(&input); err != nil {
+		resp.Error(c, http.StatusBadRequest, constant.MsgInvalidInput, err.Error())
+		return
+	}
+
+	u, err := h.service.LinkGoogle(userID, input)
+	if err != nil {
+		resp.Error(c, http.StatusBadRequest, constant.MsgGoogleLinkFail, err.Error())
+		return
+	}
+
+	resp.Success(c, http.StatusOK, constant.MsgGoogleLinkOK, toUserResponse(u, ""))
+}
+
+func (h *AuthHandler) UnlinkGoogle(c *gin.Context) {
+	userID := security.GetUserID(c)
+	if userID == 0 {
+		resp.Error(c, http.StatusUnauthorized, constant.MsgUnauthorized, nil)
+		return
+	}
+
+	u, err := h.service.UnlinkGoogle(userID)
+	if err != nil {
+		resp.Error(c, http.StatusBadRequest, constant.MsgGoogleUnlinkFail, err.Error())
+		return
+	}
+
+	resp.Success(c, http.StatusOK, constant.MsgGoogleUnlinkOK, toUserResponse(u, ""))
+}
+
 func toUserResponse(u *entity.User, token string) response.UserResponse {
 	var initials, avatarColor string
 	if u.ProfilePicture == "" {
@@ -135,6 +173,7 @@ func toUserResponse(u *entity.User, token string) response.UserResponse {
 		ProfilePicture: u.ProfilePicture,
 		Initials:       initials,
 		AvatarColor:    avatarColor,
+		EmailVerified:  u.EmailVerified,
 		CreatedAt:      u.CreatedAt,
 		UpdatedAt:      u.UpdatedAt,
 		Token:          token,

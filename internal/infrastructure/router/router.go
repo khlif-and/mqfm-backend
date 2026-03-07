@@ -4,7 +4,6 @@ import (
 	"github.com/gin-gonic/gin"
 
 	adminHandler "mqfm-backend/internal/adapter/handler/admin"
-	publicHandler "mqfm-backend/internal/adapter/handler/public"
 	userHandler "mqfm-backend/internal/adapter/handler/user"
 	"mqfm-backend/internal/infrastructure/middleware"
 )
@@ -17,7 +16,8 @@ type Handlers struct {
 	UserPlaylist   *userHandler.PlaylistHandler
 	UserLike       *userHandler.LikeHandler
 	UserHistory    *userHandler.HistoryHandler
-	Livestream     *publicHandler.LivestreamHandler
+	UserOTP        *userHandler.OTPHandler
+	UserRecommend  *userHandler.RecommendationHandler
 }
 
 func Setup(r *gin.Engine, h *Handlers) {

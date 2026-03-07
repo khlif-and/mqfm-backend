@@ -44,7 +44,8 @@ func NewMySQL(cfg *config.Config) *gorm.DB {
 		&entity.Playlist{},
 		&entity.Like{},
 		&entity.History{},
-		&entity.LiveStream{},
+		&entity.OTP{},
+		&entity.AudioScore{},
 	)
 
 	logger.Info("database connected successfully")

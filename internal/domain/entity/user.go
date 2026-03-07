@@ -15,6 +15,7 @@ type User struct {
 	Role           string         `gorm:"default:user" json:"role"`
 	Provider       string         `gorm:"default:local" json:"provider"`
 	ProviderID     string         `json:"provider_id"`
+	EmailVerified  bool           `gorm:"default:false" json:"email_verified"`
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
 	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`

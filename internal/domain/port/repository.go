@@ -2,6 +2,7 @@ package port
 
 import (
 	"mqfm-backend/internal/domain/entity"
+	"time"
 )
 
 type AdminRepository interface {
@@ -35,6 +36,10 @@ type AudioRepository interface {
 	Update(id uint, updates map[string]interface{}) error
 	Delete(id uint) error
 	Search(query string) ([]entity.Audio, error)
+	FindByIDs(ids []uint) ([]entity.Audio, error)
+	FindByArtist(artist string, limit int) ([]entity.Audio, error)
+	FindByCategoryID(categoryID uint, limit int) ([]entity.Audio, error)
+	FindAllActive() ([]entity.Audio, error)
 }
 
 type PlaylistRepository interface {
@@ -51,6 +56,8 @@ type LikeRepository interface {
 	Delete(userID, audioID uint) error
 	FindByUser(userID uint) ([]entity.Like, error)
 	Exists(userID, audioID uint) (bool, error)
+	CountByAudio(audioID uint) (int64, error)
+	AggregateLikeCounts() (map[uint]int64, error)
 }
 
 type HistoryRepository interface {
@@ -58,10 +65,26 @@ type HistoryRepository interface {
 	FindByUser(userID uint) ([]entity.History, error)
 	DeleteByUserAndAudio(userID, audioID uint) error
 	DeleteAllByUser(userID uint) error
+	CountByAudio(audioID uint) (int64, error)
+	FindFrequentByUser(userID uint, minPlays int, limit int) ([]entity.History, error)
+	AggregatePlayCounts() (map[uint]int64, error)
 }
 
-type LivestreamRepository interface {
-	FindFirst() (*entity.LiveStream, error)
-	Create(ls *entity.LiveStream) error
-	Save(ls *entity.LiveStream) error
+type OTPRepository interface {
+	Create(otp *entity.OTP) error
+	FindLatestByEmail(email string) (*entity.OTP, error)
+	MarkVerified(id uint) error
+	CountRecentByEmail(email string, since time.Time) (int64, error)
+	DeleteExpired() error
 }
+
+type AudioScoreRepository interface {
+	Upsert(score *entity.AudioScore) error
+	FindTopByScore(limit int) ([]entity.AudioScore, error)
+	FindByAudioID(audioID uint) (*entity.AudioScore, error)
+	FindByAudioIDs(audioIDs []uint) ([]entity.AudioScore, error)
+	DeleteAll() error
+	BulkUpsert(scores []entity.AudioScore) error
+}
+
+

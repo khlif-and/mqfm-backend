@@ -20,6 +20,7 @@ type UserResponse struct {
 	ProfilePicture string    `json:"profile_picture"`
 	Initials       string    `json:"initials"`
 	AvatarColor    string    `json:"avatar_color"`
+	EmailVerified  bool      `json:"email_verified"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 	Token          string    `json:"token,omitempty"`

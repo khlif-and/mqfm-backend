@@ -45,6 +45,32 @@ func (r *likeRepo) Exists(userID, audioID uint) (bool, error) {
 	return count > 0, err
 }
 
+func (r *likeRepo) CountByAudio(audioID uint) (int64, error) {
+	var count int64
+	err := r.db.Model(&entity.Like{}).Where("audio_id = ?", audioID).Count(&count).Error
+	return count, err
+}
+
+func (r *likeRepo) AggregateLikeCounts() (map[uint]int64, error) {
+	type result struct {
+		AudioID uint
+		Total   int64
+	}
+	var results []result
+	err := r.db.Model(&entity.Like{}).
+		Select("audio_id, COUNT(*) as total").
+		Group("audio_id").
+		Scan(&results).Error
+	if err != nil {
+		return nil, err
+	}
+	m := make(map[uint]int64, len(results))
+	for _, r := range results {
+		m[r.AudioID] = r.Total
+	}
+	return m, nil
+}
+
 type historyRepo struct {
 	db *gorm.DB
 }
@@ -91,4 +117,43 @@ func (r *historyRepo) DeleteByUserAndAudio(userID, audioID uint) error {
 
 func (r *historyRepo) DeleteAllByUser(userID uint) error {
 	return r.db.Where("user_id = ?", userID).Delete(&entity.History{}).Error
+}
+
+func (r *historyRepo) CountByAudio(audioID uint) (int64, error) {
+	var total int64
+	err := r.db.Model(&entity.History{}).
+		Select("COALESCE(SUM(play_count), 0)").
+		Where("audio_id = ?", audioID).
+		Scan(&total).Error
+	return total, err
+}
+
+func (r *historyRepo) FindFrequentByUser(userID uint, minPlays int, limit int) ([]entity.History, error) {
+	var histories []entity.History
+	err := r.db.Preload("Audio").
+		Where("user_id = ? AND play_count >= ?", userID, minPlays).
+		Order("play_count DESC").
+		Limit(limit).
+		Find(&histories).Error
+	return histories, err
+}
+
+func (r *historyRepo) AggregatePlayCounts() (map[uint]int64, error) {
+	type result struct {
+		AudioID uint
+		Total   int64
+	}
+	var results []result
+	err := r.db.Model(&entity.History{}).
+		Select("audio_id, SUM(play_count) as total").
+		Group("audio_id").
+		Scan(&results).Error
+	if err != nil {
+		return nil, err
+	}
+	m := make(map[uint]int64, len(results))
+	for _, r := range results {
+		m[r.AudioID] = r.Total
+	}
+	return m, nil
 }

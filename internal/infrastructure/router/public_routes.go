@@ -20,9 +20,4 @@ func registerPublicRoutes(api *gin.RouterGroup, h *Handlers) {
 		audios.GET("/search", h.AdminAudio.Search)
 		audios.GET("/:id", middleware.OptionalJWTAuth(), h.AdminAudio.FindByID)
 	}
-
-	youtube := api.Group("/youtube")
-	{
-		youtube.GET("/live-status", h.Livestream.GetStatus)
-	}
 }

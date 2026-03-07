@@ -20,6 +20,8 @@ type UserAuthService interface {
 	GoogleLogin(req request.GoogleLoginRequest) (string, *entity.User, error)
 	UpdateUser(id uint, req request.UpdateUserRequest, file *multipart.FileHeader) (*entity.User, error)
 	GetUserByID(id uint) (*entity.User, error)
+	LinkGoogle(userID uint, req request.GoogleLoginRequest) (*entity.User, error)
+	UnlinkGoogle(userID uint) (*entity.User, error)
 }
 
 type CategoryService interface {
@@ -32,10 +34,10 @@ type CategoryService interface {
 }
 
 type AudioService interface {
-	Create(req request.CreateAudioRequest, file *multipart.FileHeader) (*entity.Audio, error)
+	Create(req request.CreateAudioRequest, audioFile *multipart.FileHeader, thumbnailFile *multipart.FileHeader) (*entity.Audio, error)
 	FindAll() ([]entity.Audio, error)
 	FindByID(id uint) (*entity.Audio, error)
-	Update(id uint, req request.UpdateAudioRequest, file *multipart.FileHeader) (*entity.Audio, error)
+	Update(id uint, req request.UpdateAudioRequest, audioFile *multipart.FileHeader, thumbnailFile *multipart.FileHeader) (*entity.Audio, error)
 	Delete(id uint) error
 	Search(query string) ([]entity.Audio, error)
 }
@@ -61,7 +63,28 @@ type HistoryService interface {
 	ClearHistory(userID uint) error
 }
 
-type LivestreamService interface {
-	UpdateLiveStatus(channelID string) error
-	GetStatus() (*entity.LiveStream, error)
+type OTPService interface {
+	SendOTP(email string) error
+	VerifyOTP(email string, code string) error
 }
+
+type EmailService interface {
+	SendAsync(to string, subject string, body string)
+}
+
+type RecommendationService interface {
+	GetPopular(limit int) ([]entity.Audio, error)
+	GetMostListened(limit int) ([]entity.Audio, error)
+	GetByArtist(artist string, limit int) ([]entity.Audio, error)
+	GetSimilar(audioID uint, limit int) ([]entity.Audio, error)
+	GetQuickPick(userID uint, limit int) ([]entity.Audio, error)
+	GetOnboarding(limit int) ([]entity.Audio, error)
+	GetPersonalized(userID uint, limit int) ([]entity.Audio, error)
+	RecalculateScores() error
+}
+
+type ColorExtractorService interface {
+	ExtractDominantColor(imagePath string) (string, error)
+}
+
+

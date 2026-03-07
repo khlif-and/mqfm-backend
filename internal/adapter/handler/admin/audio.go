@@ -31,9 +31,10 @@ func (h *AudioHandler) Create(c *gin.Context) {
 		return
 	}
 
-	file, _ := c.FormFile("file")
+	audioFile, _ := c.FormFile("file")
+	thumbnailFile, _ := c.FormFile("thumbnail")
 
-	audio, err := h.audioService.Create(input, file)
+	audio, err := h.audioService.Create(input, audioFile, thumbnailFile)
 	if err != nil {
 		logger.Error("audio create: " + err.Error())
 		resp.Error(c, http.StatusInternalServerError, constant.MsgAudioCreateFail, err.Error())
@@ -93,9 +94,10 @@ func (h *AudioHandler) Update(c *gin.Context) {
 		return
 	}
 
-	file, _ := c.FormFile("file")
+	audioFile, _ := c.FormFile("file")
+	thumbnailFile, _ := c.FormFile("thumbnail")
 
-	audio, err := h.audioService.Update(id, input, file)
+	audio, err := h.audioService.Update(id, input, audioFile, thumbnailFile)
 	if err != nil {
 		logger.Error("audio update: " + err.Error())
 		resp.Error(c, http.StatusInternalServerError, constant.MsgAudioUpdateFail, err.Error())

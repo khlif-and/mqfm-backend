@@ -91,9 +91,37 @@ const (
 	MsgHistoryClearFail   = "Failed to clear history"
 	MsgInvalidAudioID     = "Invalid Audio ID"
 
-	MsgLivestreamOK       = "Live stream status"
-	MsgLivestreamNoData   = "No data yet"
-
 	MsgDirCreateFail      = "Failed to create directory"
 	MsgFileUploadFail     = "Failed to upload image"
+
+	MsgOTPSendOK          = "OTP sent successfully"
+	MsgOTPSendFail        = "Failed to send OTP"
+	MsgOTPVerifyOK        = "Email verified successfully"
+	MsgOTPVerifyFail      = "Invalid or expired OTP"
+	MsgOTPRateLimit       = "Too many OTP requests, please wait"
+	MsgOTPExpired         = "OTP has expired"
+	MsgOTPInvalid         = "Invalid OTP code"
+	MsgEmailNotVerified   = "Email not verified, please verify your email first"
+
+	MsgGoogleLinkOK       = "Google account linked successfully"
+	MsgGoogleLinkFail     = "Failed to link Google account"
+	MsgGoogleUnlinkOK     = "Google account unlinked successfully"
+	MsgGoogleUnlinkFail   = "Failed to unlink Google account"
+	MsgGoogleAlreadyLinked = "Google account already linked"
+	MsgGoogleNotLinked    = "No Google account linked"
+	MsgGoogleNoPassword   = "Cannot unlink Google without setting a password first"
+
+	MsgRecommendPopularOK      = "Popular content retrieved"
+	MsgRecommendMostListenedOK = "Most listened content retrieved"
+	MsgRecommendByArtistOK     = "Content by artist retrieved"
+	MsgRecommendSimilarOK      = "Similar content retrieved"
+	MsgRecommendQuickPickOK    = "Quick pick content retrieved"
+	MsgRecommendOnboardingOK   = "Onboarding content retrieved"
+	MsgRecommendPersonalizedOK = "Personalized content retrieved"
+	MsgRecommendFail           = "Failed to get recommendations"
+	MsgArtistRequired          = "Artist name is required"
+
+	MsgColorExtractFail   = "Failed to extract dominant color"
+	MsgScoreRecalcOK      = "Score recalculation completed"
+	MsgScoreRecalcFail    = "Score recalculation failed"
 )

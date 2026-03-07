@@ -19,11 +19,12 @@ import (
 )
 
 type userAuthService struct {
-	repo port.UserRepository
+	repo    port.UserRepository
+	otpRepo port.OTPRepository
 }
 
-func NewUserAuthService(repo port.UserRepository) port.UserAuthService {
-	return &userAuthService{repo: repo}
+func NewUserAuthService(repo port.UserRepository, otpRepo port.OTPRepository) port.UserAuthService {
+	return &userAuthService{repo: repo, otpRepo: otpRepo}
 }
 
 func (s *userAuthService) Register(req request.UserRegisterRequest, file *multipart.FileHeader) (*entity.User, error) {
@@ -51,6 +52,7 @@ func (s *userAuthService) Register(req request.UserRegisterRequest, file *multip
 		ProfilePicture: profilePath,
 		Role:           constant.RoleUser,
 		Provider:       "local",
+		EmailVerified:  false,
 	}
 
 	if err := s.repo.Create(&user); err != nil {
@@ -72,6 +74,10 @@ func (s *userAuthService) Login(req request.UserLoginRequest) (string, *entity.U
 		return "", nil, errors.New("invalid user credentials")
 	}
 
+	if !user.EmailVerified && user.Provider == "local" {
+		return "", nil, errors.New(constant.MsgEmailNotVerified)
+	}
+
 	token, err := security.GenerateToken(user.ID, constant.RoleUser)
 	if err != nil {
 		logger.Error("failed to generate user token")
@@ -91,35 +97,9 @@ type googleTokenInfo struct {
 }
 
 func (s *userAuthService) GoogleLogin(req request.GoogleLoginRequest) (string, *entity.User, error) {
-	resp, err := http.Get("https://oauth2.googleapis.com/tokeninfo?id_token=" + req.IDToken)
+	tokenInfo, err := verifyGoogleToken(req.IDToken)
 	if err != nil {
-		return "", nil, errors.New("failed to verify google token")
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", nil, errors.New("invalid google token")
-	}
-
-	var tokenInfo googleTokenInfo
-	if err := json.NewDecoder(resp.Body).Decode(&tokenInfo); err != nil {
-		return "", nil, errors.New("failed to parse google token info")
-	}
-
-	clientIDs := strings.Split(os.Getenv("GOOGLE_CLIENT_ID"), ",")
-	validAud := false
-	for _, id := range clientIDs {
-		if strings.TrimSpace(id) == tokenInfo.Aud {
-			validAud = true
-			break
-		}
-	}
-	if !validAud {
-		return "", nil, errors.New("invalid google token audience")
-	}
-
-	if tokenInfo.EmailVerified != "true" {
-		return "", nil, errors.New("google email not verified")
+		return "", nil, err
 	}
 
 	var localProfilePic string
@@ -140,9 +120,10 @@ func (s *userAuthService) GoogleLogin(req request.GoogleLoginRequest) (string, *
 		existingUser, emailErr := s.repo.FindByEmail(tokenInfo.Email)
 		if emailErr == nil {
 			updates := map[string]interface{}{
-				"provider":    "google",
-				"provider_id": tokenInfo.Sub,
-				"username":    username,
+				"provider":       "google",
+				"provider_id":    tokenInfo.Sub,
+				"username":       username,
+				"email_verified": true,
 			}
 			if localProfilePic != "" {
 				updates["profile_picture"] = localProfilePic
@@ -151,6 +132,7 @@ func (s *userAuthService) GoogleLogin(req request.GoogleLoginRequest) (string, *
 			existingUser.Provider = "google"
 			existingUser.ProviderID = tokenInfo.Sub
 			existingUser.Username = username
+			existingUser.EmailVerified = true
 			if localProfilePic != "" {
 				existingUser.ProfilePicture = localProfilePic
 			}
@@ -163,6 +145,7 @@ func (s *userAuthService) GoogleLogin(req request.GoogleLoginRequest) (string, *
 				Role:           constant.RoleUser,
 				Provider:       "google",
 				ProviderID:     tokenInfo.Sub,
+				EmailVerified:  true,
 			}
 			if err := s.repo.Create(&newUser); err != nil {
 				return "", nil, fmt.Errorf("failed to create google user: %w", err)
@@ -170,12 +153,13 @@ func (s *userAuthService) GoogleLogin(req request.GoogleLoginRequest) (string, *
 			user = &newUser
 		}
 	} else {
-		updates := map[string]interface{}{"username": username}
+		updates := map[string]interface{}{"username": username, "email_verified": true}
 		if localProfilePic != "" {
 			updates["profile_picture"] = localProfilePic
 			user.ProfilePicture = localProfilePic
 		}
 		user.Username = username
+		user.EmailVerified = true
 		_ = s.repo.Update(user.ID, updates)
 	}
 
@@ -186,6 +170,66 @@ func (s *userAuthService) GoogleLogin(req request.GoogleLoginRequest) (string, *
 	}
 
 	return token, user, nil
+}
+
+func (s *userAuthService) LinkGoogle(userID uint, req request.GoogleLoginRequest) (*entity.User, error) {
+	tokenInfo, err := verifyGoogleToken(req.IDToken)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := s.repo.FindByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if user.Provider == "google" && user.ProviderID != "" {
+		return nil, errors.New(constant.MsgGoogleAlreadyLinked)
+	}
+
+	updates := map[string]interface{}{
+		"provider":       "google",
+		"provider_id":    tokenInfo.Sub,
+		"email_verified": true,
+	}
+	if user.ProfilePicture == "" && tokenInfo.Picture != "" {
+		downloadedPath, downloadErr := helper.DownloadImage(tokenInfo.Picture, "uploads/profiles")
+		if downloadErr == nil && downloadedPath != "" {
+			updates["profile_picture"] = downloadedPath
+		}
+	}
+
+	if err := s.repo.Update(userID, updates); err != nil {
+		return nil, err
+	}
+
+	return s.repo.FindByID(userID)
+}
+
+func (s *userAuthService) UnlinkGoogle(userID uint) (*entity.User, error) {
+	user, err := s.repo.FindByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if user.Provider != "google" || user.ProviderID == "" {
+		return nil, errors.New(constant.MsgGoogleNotLinked)
+	}
+
+	if user.Password == "" {
+		return nil, errors.New(constant.MsgGoogleNoPassword)
+	}
+
+	updates := map[string]interface{}{
+		"provider":    "local",
+		"provider_id": "",
+	}
+
+	if err := s.repo.Update(userID, updates); err != nil {
+		return nil, err
+	}
+
+	return s.repo.FindByID(userID)
 }
 
 func (s *userAuthService) UpdateUser(id uint, req request.UpdateUserRequest, file *multipart.FileHeader) (*entity.User, error) {
@@ -217,4 +261,39 @@ func (s *userAuthService) UpdateUser(id uint, req request.UpdateUserRequest, fil
 
 func (s *userAuthService) GetUserByID(id uint) (*entity.User, error) {
 	return s.repo.FindByID(id)
+}
+
+func verifyGoogleToken(idToken string) (*googleTokenInfo, error) {
+	resp, err := http.Get("https://oauth2.googleapis.com/tokeninfo?id_token=" + idToken)
+	if err != nil {
+		return nil, errors.New("failed to verify google token")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New("invalid google token")
+	}
+
+	var tokenInfo googleTokenInfo
+	if err := json.NewDecoder(resp.Body).Decode(&tokenInfo); err != nil {
+		return nil, errors.New("failed to parse google token info")
+	}
+
+	clientIDs := strings.Split(os.Getenv("GOOGLE_CLIENT_ID"), ",")
+	validAud := false
+	for _, id := range clientIDs {
+		if strings.TrimSpace(id) == tokenInfo.Aud {
+			validAud = true
+			break
+		}
+	}
+	if !validAud {
+		return nil, errors.New("invalid google token audience")
+	}
+
+	if tokenInfo.EmailVerified != "true" {
+		return nil, errors.New("google email not verified")
+	}
+
+	return &tokenInfo, nil
 }

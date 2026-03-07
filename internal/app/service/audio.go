@@ -12,31 +12,49 @@ import (
 )
 
 type audioService struct {
-	repo port.AudioRepository
+	repo           port.AudioRepository
+	colorExtractor port.ColorExtractorService
 }
 
-func NewAudioService(repo port.AudioRepository) port.AudioService {
-	return &audioService{repo: repo}
+func NewAudioService(repo port.AudioRepository, colorExtractor port.ColorExtractorService) port.AudioService {
+	return &audioService{repo: repo, colorExtractor: colorExtractor}
 }
 
-func (s *audioService) Create(req request.CreateAudioRequest, file *multipart.FileHeader) (*entity.Audio, error) {
+func (s *audioService) Create(req request.CreateAudioRequest, audioFile *multipart.FileHeader, thumbnailFile *multipart.FileHeader) (*entity.Audio, error) {
 	var filePath string
-	if file != nil {
-		filename := helper.GenerateUniqueFilename(file.Filename)
+	if audioFile != nil {
+		filename := helper.GenerateUniqueFilename(audioFile.Filename)
 		path := "uploads/audios/" + filename
-		if err := helper.SaveUploadedFile(file, path); err != nil {
+		if err := helper.SaveUploadedFile(audioFile, path); err != nil {
 			logger.Error("failed to save audio file")
 		} else {
 			filePath = path
 		}
 	}
 
+	var thumbnailPath, dominantColor string
+	if thumbnailFile != nil {
+		filename := helper.GenerateUniqueFilename(thumbnailFile.Filename)
+		path := "uploads/thumbnails/" + filename
+		if err := helper.SaveUploadedFile(thumbnailFile, path); err != nil {
+			logger.Error("failed to save thumbnail")
+		} else {
+			thumbnailPath = path
+			if color, err := s.colorExtractor.ExtractDominantColor(path); err == nil {
+				dominantColor = color
+			}
+		}
+	}
+
 	audio := entity.Audio{
-		Title:      req.Title,
-		Artist:     req.Artist,
-		Status:     req.Status,
-		CategoryID: req.CategoryID,
-		FilePath:   filePath,
+		Title:         req.Title,
+		Artist:        req.Artist,
+		Description:   req.Description,
+		Status:        req.Status,
+		CategoryID:    req.CategoryID,
+		FilePath:      filePath,
+		Thumbnail:     thumbnailPath,
+		DominantColor: dominantColor,
 	}
 
 	if err := s.repo.Create(&audio); err != nil {
@@ -54,13 +72,16 @@ func (s *audioService) FindByID(id uint) (*entity.Audio, error) {
 	return s.repo.FindByID(id)
 }
 
-func (s *audioService) Update(id uint, req request.UpdateAudioRequest, file *multipart.FileHeader) (*entity.Audio, error) {
+func (s *audioService) Update(id uint, req request.UpdateAudioRequest, audioFile *multipart.FileHeader, thumbnailFile *multipart.FileHeader) (*entity.Audio, error) {
 	updates := make(map[string]interface{})
 	if req.Title != "" {
 		updates["title"] = req.Title
 	}
 	if req.Artist != "" {
 		updates["artist"] = req.Artist
+	}
+	if req.Description != "" {
+		updates["description"] = req.Description
 	}
 	if req.Status != "" {
 		updates["status"] = req.Status
@@ -69,13 +90,26 @@ func (s *audioService) Update(id uint, req request.UpdateAudioRequest, file *mul
 		updates["category_id"] = req.CategoryID
 	}
 
-	if file != nil {
-		filename := helper.GenerateUniqueFilename(file.Filename)
+	if audioFile != nil {
+		filename := helper.GenerateUniqueFilename(audioFile.Filename)
 		path := "uploads/audios/" + filename
-		if err := helper.SaveUploadedFile(file, path); err != nil {
+		if err := helper.SaveUploadedFile(audioFile, path); err != nil {
 			logger.Error("failed to save audio file")
 		} else {
 			updates["file_path"] = path
+		}
+	}
+
+	if thumbnailFile != nil {
+		filename := helper.GenerateUniqueFilename(thumbnailFile.Filename)
+		path := "uploads/thumbnails/" + filename
+		if err := helper.SaveUploadedFile(thumbnailFile, path); err != nil {
+			logger.Error("failed to save thumbnail")
+		} else {
+			updates["thumbnail"] = path
+			if color, err := s.colorExtractor.ExtractDominantColor(path); err == nil {
+				updates["dominant_color"] = color
+			}
 		}
 	}
 
