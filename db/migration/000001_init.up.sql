@@ -1,0 +1,98 @@
+CREATE TABLE IF NOT EXISTS admins (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(50) DEFAULT 'admin',
+    created_at DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    deleted_at DATETIME(3) NULL,
+    INDEX idx_admins_deleted_at (deleted_at)
+);
+
+CREATE TABLE IF NOT EXISTS users (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL DEFAULT '',
+    profile_picture VARCHAR(500) DEFAULT '',
+    role VARCHAR(50) DEFAULT 'user',
+    provider VARCHAR(50) DEFAULT 'local',
+    provider_id VARCHAR(255) DEFAULT '',
+    created_at DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    deleted_at DATETIME(3) NULL,
+    INDEX idx_users_deleted_at (deleted_at)
+);
+
+CREATE TABLE IF NOT EXISTS categories (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    description TEXT DEFAULT '',
+    image VARCHAR(500) DEFAULT '',
+    created_at DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    deleted_at DATETIME(3) NULL,
+    INDEX idx_categories_deleted_at (deleted_at)
+);
+
+CREATE TABLE IF NOT EXISTS audios (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    artist VARCHAR(255) DEFAULT '',
+    description TEXT DEFAULT '',
+    file_path VARCHAR(500) DEFAULT '',
+    duration INT DEFAULT 0,
+    status VARCHAR(50) DEFAULT 'active',
+    thumbnail VARCHAR(500) DEFAULT '',
+    category_id BIGINT UNSIGNED DEFAULT 0,
+    created_at DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    deleted_at DATETIME(3) NULL,
+    INDEX idx_audios_deleted_at (deleted_at)
+);
+
+CREATE TABLE IF NOT EXISTS playlists (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNSIGNED NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    image_url VARCHAR(500) DEFAULT '',
+    created_at DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    deleted_at DATETIME(3) NULL,
+    INDEX idx_playlists_user_id (user_id),
+    INDEX idx_playlists_deleted_at (deleted_at)
+);
+
+CREATE TABLE IF NOT EXISTS playlist_audios (
+    playlist_id BIGINT UNSIGNED NOT NULL,
+    audio_id BIGINT UNSIGNED NOT NULL,
+    PRIMARY KEY (playlist_id, audio_id)
+);
+
+CREATE TABLE IF NOT EXISTS likes (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNSIGNED NOT NULL,
+    audio_id BIGINT UNSIGNED NOT NULL,
+    created_at DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3),
+    UNIQUE INDEX idx_user_audio (user_id, audio_id)
+);
+
+CREATE TABLE IF NOT EXISTS histories (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNSIGNED NOT NULL,
+    audio_id BIGINT UNSIGNED NOT NULL,
+    play_count INT DEFAULT 1,
+    played_at DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3),
+    created_at DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3),
+    UNIQUE INDEX idx_user_audio_history (user_id, audio_id)
+);
+
+CREATE TABLE IF NOT EXISTS live_streams (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    is_live BOOLEAN DEFAULT FALSE,
+    video_id VARCHAR(255) DEFAULT '',
+    title VARCHAR(500) DEFAULT '',
+    thumbnail VARCHAR(500) DEFAULT '',
+    last_checked DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3)
+);
