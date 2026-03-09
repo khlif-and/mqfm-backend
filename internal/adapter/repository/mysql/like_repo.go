@@ -22,8 +22,8 @@ func (r *likeRepo) Create(like *entity.Like) error {
 	return r.db.Create(like).Error
 }
 
-func (r *likeRepo) Delete(userID, audioID uint) error {
-	result := r.db.Where("user_id = ? AND audio_id = ?", userID, audioID).Delete(&entity.Like{})
+func (r *likeRepo) Delete(userID uint, targetType string, targetID uint) error {
+	result := r.db.Where("user_id = ? AND target_type = ? AND target_id = ?", userID, targetType, targetID).Delete(&entity.Like{})
 	if result.Error != nil {
 		return result.Error
 	}
@@ -33,40 +33,54 @@ func (r *likeRepo) Delete(userID, audioID uint) error {
 	return nil
 }
 
-func (r *likeRepo) FindByUser(userID uint) ([]entity.Like, error) {
+func (r *likeRepo) FindByUser(userID uint, targetType string) ([]entity.Like, error) {
 	var likes []entity.Like
-	err := r.db.Preload("Audio").Where("user_id = ?", userID).Find(&likes).Error
+	q := r.db.Where("user_id = ?", userID)
+	if targetType != "" {
+		q = q.Where("target_type = ?", targetType)
+	}
+	if targetType == "audio" {
+		q = q.Preload("Audio")
+	} else if targetType == "playlist" {
+		q = q.Preload("Playlist")
+	}
+	err := q.Order("created_at DESC").Find(&likes).Error
 	return likes, err
 }
 
-func (r *likeRepo) Exists(userID, audioID uint) (bool, error) {
+func (r *likeRepo) Exists(userID uint, targetType string, targetID uint) (bool, error) {
 	var count int64
-	err := r.db.Model(&entity.Like{}).Where("user_id = ? AND audio_id = ?", userID, audioID).Count(&count).Error
+	err := r.db.Model(&entity.Like{}).
+		Where("user_id = ? AND target_type = ? AND target_id = ?", userID, targetType, targetID).
+		Count(&count).Error
 	return count > 0, err
 }
 
-func (r *likeRepo) CountByAudio(audioID uint) (int64, error) {
+func (r *likeRepo) CountByTarget(targetType string, targetID uint) (int64, error) {
 	var count int64
-	err := r.db.Model(&entity.Like{}).Where("audio_id = ?", audioID).Count(&count).Error
+	err := r.db.Model(&entity.Like{}).
+		Where("target_type = ? AND target_id = ?", targetType, targetID).
+		Count(&count).Error
 	return count, err
 }
 
 func (r *likeRepo) AggregateLikeCounts() (map[uint]int64, error) {
 	type result struct {
-		AudioID uint
-		Total   int64
+		TargetID uint  `gorm:"column:target_id"`
+		Total    int64 `gorm:"column:total"`
 	}
 	var results []result
 	err := r.db.Model(&entity.Like{}).
-		Select("audio_id, COUNT(*) as total").
-		Group("audio_id").
+		Select("target_id, COUNT(*) as total").
+		Where("target_type = ?", "audio").
+		Group("target_id").
 		Scan(&results).Error
 	if err != nil {
 		return nil, err
 	}
 	m := make(map[uint]int64, len(results))
 	for _, r := range results {
-		m[r.AudioID] = r.Total
+		m[r.TargetID] = r.Total
 	}
 	return m, nil
 }
@@ -101,6 +115,12 @@ func (r *historyRepo) Upsert(history *entity.History) error {
 func (r *historyRepo) FindByUser(userID uint) ([]entity.History, error) {
 	var histories []entity.History
 	err := r.db.Preload("Audio").Where("user_id = ?", userID).Order("played_at DESC").Find(&histories).Error
+	return histories, err
+}
+
+func (r *historyRepo) FindByUsers(userIDs []uint) ([]entity.History, error) {
+	var histories []entity.History
+	err := r.db.Where("user_id IN ?", userIDs).Find(&histories).Error
 	return histories, err
 }
 

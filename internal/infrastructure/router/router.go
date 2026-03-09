@@ -12,6 +12,7 @@ type Handlers struct {
 	AdminAuth        *adminHandler.AuthHandler
 	AdminCategory    *adminHandler.CategoryHandler
 	AdminAudio       *adminHandler.AudioHandler
+	AdminPlaylist    *adminHandler.PlaylistHandler
 	AdminEvent       *adminHandler.EventHandler
 	AdminSeries      *adminHandler.SeriesHandler
 	UserAuth         *userHandler.AuthHandler
@@ -39,7 +40,7 @@ type Handlers struct {
 func Setup(r *gin.Engine, h *Handlers) {
 	r.Use(middleware.Security())
 	r.Use(middleware.RequestLogger())
-	r.Use(middleware.RateLimit(10, 20))
+	r.Use(middleware.RateLimit(100, 200))
 
 	r.Static("/uploads", "./uploads")
 

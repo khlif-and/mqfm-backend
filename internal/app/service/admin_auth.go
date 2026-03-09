@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 
 	"mqfm-backend/internal/domain/entity"
@@ -12,11 +13,12 @@ import (
 )
 
 type adminAuthService struct {
-	repo port.AdminRepository
+	repo       port.AdminRepository
+	tokenStore port.TokenStore
 }
 
-func NewAdminAuthService(repo port.AdminRepository) port.AdminAuthService {
-	return &adminAuthService{repo: repo}
+func NewAdminAuthService(repo port.AdminRepository, tokenStore port.TokenStore) port.AdminAuthService {
+	return &adminAuthService{repo: repo, tokenStore: tokenStore}
 }
 
 func (s *adminAuthService) Register(req request.AdminRegisterRequest) (*entity.Admin, error) {
@@ -56,6 +58,10 @@ func (s *adminAuthService) Login(req request.AdminLoginRequest) (string, *entity
 	if err != nil {
 		logger.Error("failed to generate admin token")
 		return "", nil, err
+	}
+
+	if s.tokenStore != nil {
+		_ = s.tokenStore.StoreToken(context.Background(), admin.ID, constant.RoleAdmin, token, security.TokenTTL)
 	}
 
 	return token, admin, nil

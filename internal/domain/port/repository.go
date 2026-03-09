@@ -48,27 +48,31 @@ type AudioRepository interface {
 type PlaylistRepository interface {
 	Create(playlist *entity.Playlist) error
 	FindByUserID(userID uint) ([]entity.Playlist, error)
-	FindByID(id uint, userID uint) (*entity.Playlist, error)
-	Search(userID uint, query string) ([]entity.Playlist, error)
+	FindByID(id uint) (*entity.Playlist, error)
+	FindAll() ([]entity.Playlist, error)
+	Search(query string) ([]entity.Playlist, error)
 	AddAudio(playlist *entity.Playlist, audio *entity.Audio) error
 	FindAudioByID(id uint) (*entity.Audio, error)
 	RemoveAudio(playlist *entity.Playlist, audio *entity.Audio) error
 	FindByShareToken(token string) (*entity.Playlist, error)
 	Update(id uint, updates map[string]interface{}) error
+	Delete(id uint) error
+	CountAudios(playlistID uint) (int, error)
 }
 
 type LikeRepository interface {
 	Create(like *entity.Like) error
-	Delete(userID, audioID uint) error
-	FindByUser(userID uint) ([]entity.Like, error)
-	Exists(userID, audioID uint) (bool, error)
-	CountByAudio(audioID uint) (int64, error)
+	Delete(userID uint, targetType string, targetID uint) error
+	FindByUser(userID uint, targetType string) ([]entity.Like, error)
+	Exists(userID uint, targetType string, targetID uint) (bool, error)
+	CountByTarget(targetType string, targetID uint) (int64, error)
 	AggregateLikeCounts() (map[uint]int64, error)
 }
 
 type HistoryRepository interface {
 	Upsert(history *entity.History) error
 	FindByUser(userID uint) ([]entity.History, error)
+	FindByUsers(userIDs []uint) ([]entity.History, error)
 	DeleteByUserAndAudio(userID, audioID uint) error
 	DeleteAllByUser(userID uint) error
 	CountByAudio(audioID uint) (int64, error)
@@ -87,6 +91,7 @@ type OTPRepository interface {
 type AudioScoreRepository interface {
 	Upsert(score *entity.AudioScore) error
 	FindTopByScore(limit int) ([]entity.AudioScore, error)
+	FindTopByLikes(limit int, maxLikes int64) ([]entity.AudioScore, error)
 	FindByAudioID(audioID uint) (*entity.AudioScore, error)
 	FindByAudioIDs(audioIDs []uint) ([]entity.AudioScore, error)
 	DeleteAll() error
@@ -228,6 +233,7 @@ type SmartResumeRepository interface {
 type UserLocationRepository interface {
 	Upsert(location *entity.UserLocation) error
 	FindByUser(userID uint) (*entity.UserLocation, error)
+	FindAll() ([]entity.UserLocation, error)
 }
 
 type PlaylistCollaboratorRepository interface {

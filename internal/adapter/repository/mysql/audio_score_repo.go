@@ -35,6 +35,16 @@ func (r *audioScoreRepo) FindTopByScore(limit int) ([]entity.AudioScore, error) 
 	return scores, err
 }
 
+func (r *audioScoreRepo) FindTopByLikes(limit int, maxLikes int64) ([]entity.AudioScore, error) {
+	var scores []entity.AudioScore
+	err := r.db.Preload("Audio").
+		Where("total_likes <= ?", maxLikes).
+		Order("total_likes DESC").
+		Limit(limit).
+		Find(&scores).Error
+	return scores, err
+}
+
 func (r *audioScoreRepo) FindByAudioID(audioID uint) (*entity.AudioScore, error) {
 	var score entity.AudioScore
 	err := r.db.Where("audio_id = ?", audioID).First(&score).Error

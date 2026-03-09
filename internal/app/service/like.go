@@ -17,8 +17,8 @@ func NewLikeService(repo port.LikeRepository) port.LikeService {
 	return &likeService{repo: repo}
 }
 
-func (s *likeService) LikeAudio(userID uint, req request.LikeRequest) (*entity.Like, error) {
-	exists, err := s.repo.Exists(userID, req.AudioID)
+func (s *likeService) Like(userID uint, req request.LikeRequest) (*entity.Like, error) {
+	exists, err := s.repo.Exists(userID, req.TargetType, req.TargetID)
 	if err != nil {
 		return nil, err
 	}
@@ -27,8 +27,9 @@ func (s *likeService) LikeAudio(userID uint, req request.LikeRequest) (*entity.L
 	}
 
 	like := entity.Like{
-		UserID:  userID,
-		AudioID: req.AudioID,
+		UserID:     userID,
+		TargetType: req.TargetType,
+		TargetID:   req.TargetID,
 	}
 
 	if err := s.repo.Create(&like); err != nil {
@@ -38,10 +39,18 @@ func (s *likeService) LikeAudio(userID uint, req request.LikeRequest) (*entity.L
 	return &like, nil
 }
 
-func (s *likeService) UnlikeAudio(userID, audioID uint) error {
-	return s.repo.Delete(userID, audioID)
+func (s *likeService) Unlike(userID uint, req request.UnlikeRequest) error {
+	return s.repo.Delete(userID, req.TargetType, req.TargetID)
 }
 
-func (s *likeService) GetLikedAudios(userID uint) ([]entity.Like, error) {
-	return s.repo.FindByUser(userID)
+func (s *likeService) GetLikes(userID string, targetType string) ([]entity.Like, error) {
+	var uid uint
+	for _, c := range userID {
+		uid = uid*10 + uint(c-'0')
+	}
+	return s.repo.FindByUser(uid, targetType)
+}
+
+func (s *likeService) CountByTarget(targetType string, targetID uint) (int64, error) {
+	return s.repo.CountByTarget(targetType, targetID)
 }

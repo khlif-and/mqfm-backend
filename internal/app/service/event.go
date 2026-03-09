@@ -22,9 +22,16 @@ func NewEventService(repo port.EventRepository, notifSvc port.NotificationServic
 }
 
 func (s *eventService) Create(req request.CreateEventRequest, file *multipart.FileHeader) (*entity.Event, error) {
-	eventDate, err := time.Parse("2006-01-02 15:04:05", req.EventDate)
+	var eventDate time.Time
+	var err error
+	for _, layout := range []string{"2006-01-02 15:04:05", time.RFC3339, "2006-01-02T15:04:05", "2006-01-02"} {
+		eventDate, err = time.Parse(layout, req.EventDate)
+		if err == nil {
+			break
+		}
+	}
 	if err != nil {
-		return nil, errors.New("invalid event date format, use YYYY-MM-DD HH:MM:SS")
+		return nil, errors.New("invalid event date format, use YYYY-MM-DD HH:MM:SS or RFC3339")
 	}
 
 	var imagePath string
@@ -72,7 +79,14 @@ func (s *eventService) Update(id uint, req request.UpdateEventRequest, file *mul
 		updates["description"] = req.Description
 	}
 	if req.EventDate != "" {
-		eventDate, err := time.Parse("2006-01-02 15:04:05", req.EventDate)
+		var eventDate time.Time
+		var err error
+		for _, layout := range []string{"2006-01-02 15:04:05", time.RFC3339, "2006-01-02T15:04:05", "2006-01-02"} {
+			eventDate, err = time.Parse(layout, req.EventDate)
+			if err == nil {
+				break
+			}
+		}
 		if err != nil {
 			return nil, errors.New("invalid event date format")
 		}

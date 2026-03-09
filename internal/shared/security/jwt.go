@@ -8,6 +8,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+const TokenTTL = 1 * time.Hour
+
 func getSecretKey() []byte {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
@@ -20,7 +22,8 @@ func GenerateToken(userID uint, role string) (string, error) {
 	claims := jwt.MapClaims{
 		"user_id": userID,
 		"role":    role,
-		"exp":     time.Now().Add(24 * time.Hour).Unix(),
+		"exp":     time.Now().Add(TokenTTL).Unix(),
+		"iat":     time.Now().Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(getSecretKey())
@@ -44,4 +47,27 @@ func GetUserID(c *gin.Context) uint {
 		return uintVal
 	}
 	return 0
+}
+
+func GetRole(c *gin.Context) string {
+	role, exists := c.Get("role")
+	if !exists {
+		return ""
+	}
+	if s, ok := role.(string); ok {
+		return s
+	}
+	return ""
+}
+
+func ShouldRefresh(token *jwt.Token) bool {
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return false
+	}
+	exp, err := claims.GetExpirationTime()
+	if err != nil {
+		return false
+	}
+	return time.Until(exp.Time) < 30*time.Minute
 }

@@ -25,7 +25,7 @@ func NewPlaylistCollabService(
 }
 
 func (s *playlistCollabService) AddCollaborator(ownerID, playlistID, collaboratorID uint) error {
-	playlist, err := s.playlistRepo.FindByID(playlistID, ownerID)
+	playlist, err := s.playlistRepo.FindByID(playlistID)
 	if err != nil || playlist.UserID != ownerID {
 		return errors.New("only owner can add collaborators")
 	}
@@ -46,7 +46,7 @@ func (s *playlistCollabService) AddCollaborator(ownerID, playlistID, collaborato
 }
 
 func (s *playlistCollabService) RemoveCollaborator(ownerID, playlistID, collaboratorID uint) error {
-	playlist, err := s.playlistRepo.FindByID(playlistID, ownerID)
+	playlist, err := s.playlistRepo.FindByID(playlistID)
 	if err != nil || playlist.UserID != ownerID {
 		return errors.New("only owner can remove collaborators")
 	}
@@ -69,7 +69,7 @@ func (s *playlistCollabService) ContributeAudio(userID, playlistID, audioID uint
 		return errors.New("audio not found")
 	}
 
-	playlist, err := s.playlistRepo.FindByID(playlistID, 0)
+	playlist, err := s.playlistRepo.FindByID(playlistID)
 	if err != nil {
 		return errors.New("playlist not found")
 	}
