@@ -27,6 +27,12 @@ func main() {
 	cron := scheduler.NewScoreRecalculator(container.RecommendationService, 3)
 	cron.Start()
 
+	votingScheduler := scheduler.NewVotingScheduler(container.AudioVoteService)
+	votingScheduler.Start()
+
+	notifScheduler := scheduler.NewNotificationScheduler(container.NotificationService)
+	notifScheduler.Start()
+
 	r := gin.New()
 	r.Use(gin.Recovery())
 

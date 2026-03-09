@@ -21,6 +21,7 @@ type recommendationService struct {
 	scoreRepo      port.AudioScoreRepository
 	historyRepo    port.HistoryRepository
 	likeRepo       port.LikeRepository
+	locationRepo   port.UserLocationRepository
 }
 
 func NewRecommendationService(
@@ -28,12 +29,14 @@ func NewRecommendationService(
 	scoreRepo port.AudioScoreRepository,
 	historyRepo port.HistoryRepository,
 	likeRepo port.LikeRepository,
+	locationRepo port.UserLocationRepository,
 ) port.RecommendationService {
 	return &recommendationService{
-		audioRepo:   audioRepo,
-		scoreRepo:   scoreRepo,
-		historyRepo: historyRepo,
-		likeRepo:    likeRepo,
+		audioRepo:    audioRepo,
+		scoreRepo:    scoreRepo,
+		historyRepo:  historyRepo,
+		likeRepo:     likeRepo,
+		locationRepo: locationRepo,
 	}
 }
 
@@ -374,4 +377,34 @@ func extractAudiosFromScores(scores []entity.AudioScore) []entity.Audio {
 		}
 	}
 	return audios
+}
+
+func (s *recommendationService) GetLocationBased(userID uint, limit int) ([]entity.Audio, error) {
+	loc, err := s.locationRepo.FindByUser(userID)
+	if err != nil || loc.City == "" {
+		return s.GetPopular(limit)
+	}
+
+	audios, err := s.audioRepo.Search(loc.City)
+	if err != nil || len(audios) == 0 {
+		return s.GetPopular(limit)
+	}
+
+	if len(audios) > limit {
+		audios = audios[:limit]
+	}
+	return audios, nil
+}
+
+func (s *recommendationService) GetTimeBasedPersonalized(userID uint, hour int, limit int) ([]entity.Audio, error) {
+	switch {
+	case hour >= 5 && hour < 12:
+		return s.GetPopular(limit)
+	case hour >= 12 && hour < 17:
+		return s.GetMostListened(limit)
+	case hour >= 17 && hour < 21:
+		return s.GetPersonalized(userID, limit)
+	default:
+		return s.GetQuickPick(userID, limit)
+	}
 }

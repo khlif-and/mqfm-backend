@@ -51,3 +51,20 @@ func (r *playlistRepo) FindAudioByID(id uint) (*entity.Audio, error) {
 	}
 	return &audio, nil
 }
+
+func (r *playlistRepo) RemoveAudio(playlist *entity.Playlist, audio *entity.Audio) error {
+	return r.db.Model(playlist).Association("Audios").Delete(audio)
+}
+
+func (r *playlistRepo) FindByShareToken(token string) (*entity.Playlist, error) {
+	var playlist entity.Playlist
+	err := r.db.Where("share_token = ?", token).Preload("Audios").First(&playlist).Error
+	if err != nil {
+		return nil, err
+	}
+	return &playlist, nil
+}
+
+func (r *playlistRepo) Update(id uint, updates map[string]interface{}) error {
+	return r.db.Model(&entity.Playlist{}).Where("id = ?", id).Updates(updates).Error
+}

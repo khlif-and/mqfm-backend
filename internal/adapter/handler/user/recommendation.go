@@ -2,6 +2,7 @@ package user
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -103,6 +104,34 @@ func (h *RecommendationHandler) GetPersonalized(c *gin.Context) {
 		return
 	}
 	resp.Success(c, http.StatusOK, constant.MsgRecommendPersonalizedOK, toAudioList(audios))
+}
+
+func (h *RecommendationHandler) GetLocationBased(c *gin.Context) {
+	userID := security.GetUserID(c)
+	if userID == 0 {
+		resp.Error(c, http.StatusUnauthorized, constant.MsgUnauthorized, nil)
+		return
+	}
+	audios, err := h.service.GetLocationBased(userID, 20)
+	if err != nil {
+		resp.Error(c, http.StatusInternalServerError, constant.MsgRecommendFail, err.Error())
+		return
+	}
+	resp.Success(c, http.StatusOK, constant.MsgRecommendLocationOK, toAudioList(audios))
+}
+
+func (h *RecommendationHandler) GetTimeBased(c *gin.Context) {
+	userID := security.GetUserID(c)
+	if userID == 0 {
+		resp.Error(c, http.StatusUnauthorized, constant.MsgUnauthorized, nil)
+		return
+	}
+	audios, err := h.service.GetTimeBasedPersonalized(userID, time.Now().Hour(), 20)
+	if err != nil {
+		resp.Error(c, http.StatusInternalServerError, constant.MsgRecommendFail, err.Error())
+		return
+	}
+	resp.Success(c, http.StatusOK, constant.MsgRecommendTimeBasedOK, toAudioList(audios))
 }
 
 func toAudioList(audios []entity.Audio) []response.AudioResponse {

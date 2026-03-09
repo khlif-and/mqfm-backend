@@ -9,15 +9,31 @@ import (
 )
 
 type Handlers struct {
-	AdminAuth      *adminHandler.AuthHandler
-	AdminCategory  *adminHandler.CategoryHandler
-	AdminAudio     *adminHandler.AudioHandler
-	UserAuth       *userHandler.AuthHandler
-	UserPlaylist   *userHandler.PlaylistHandler
-	UserLike       *userHandler.LikeHandler
-	UserHistory    *userHandler.HistoryHandler
-	UserOTP        *userHandler.OTPHandler
-	UserRecommend  *userHandler.RecommendationHandler
+	AdminAuth        *adminHandler.AuthHandler
+	AdminCategory    *adminHandler.CategoryHandler
+	AdminAudio       *adminHandler.AudioHandler
+	AdminEvent       *adminHandler.EventHandler
+	AdminSeries      *adminHandler.SeriesHandler
+	UserAuth         *userHandler.AuthHandler
+	UserPlaylist     *userHandler.PlaylistHandler
+	UserLike         *userHandler.LikeHandler
+	UserHistory      *userHandler.HistoryHandler
+	UserOTP          *userHandler.OTPHandler
+	UserRecommend    *userHandler.RecommendationHandler
+	UserBookmark     *userHandler.BookmarkHandler
+	UserNotification *userHandler.NotificationHandler
+	UserProgress     *userHandler.ProgressHandler
+	UserDownload     *userHandler.DownloadHandler
+	UserStats        *userHandler.StatsHandler
+	UserClip         *userHandler.ClipHandler
+	UserEvent        *userHandler.EventHandler
+	UserPreference   *userHandler.PreferenceHandler
+	UserVote         *userHandler.VoteHandler
+	UserResume       *userHandler.ResumeHandler
+	UserShare        *userHandler.ShareHandler
+	UserFavArtist    *userHandler.FavoriteArtistHandler
+	UserLocation     *userHandler.LocationHandler
+	UserCollab       *userHandler.PlaylistCollabHandler
 }
 
 func Setup(r *gin.Engine, h *Handlers) {
