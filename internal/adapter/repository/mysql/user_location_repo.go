@@ -31,3 +31,9 @@ func (r *userLocationRepo) FindByUser(userID uint) (*entity.UserLocation, error)
 	}
 	return &location, nil
 }
+
+func (r *userLocationRepo) FindAll() ([]entity.UserLocation, error) {
+	var locations []entity.UserLocation
+	err := r.db.Find(&locations).Error
+	return locations, err
+}

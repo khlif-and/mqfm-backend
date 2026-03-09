@@ -43,20 +43,23 @@ type AudioService interface {
 }
 
 type PlaylistService interface {
-	Create(playlist *entity.Playlist) error
+	Create(playlist *entity.Playlist, file interface{}) error
 	GetByUserID(userID uint) ([]entity.Playlist, error)
-	GetByID(id uint, userID uint) (*entity.Playlist, error)
-	Search(userID uint, query string) ([]entity.Playlist, error)
-	AddAudioToPlaylist(userID, playlistID, audioID uint) error
-	RemoveAudioFromPlaylist(userID, playlistID, audioID uint) error
-	SharePlaylist(userID, playlistID uint) (string, error)
+	GetByID(id uint) (*entity.Playlist, error)
+	Update(id uint, updates map[string]interface{}) (*entity.Playlist, error)
+	Delete(id, userID uint) error
+	Search(query string) ([]entity.Playlist, error)
+	AddAudioToPlaylist(playlistID, audioID uint) error
+	RemoveAudioFromPlaylist(playlistID, audioID uint) error
+	SharePlaylist(playlistID uint) (string, error)
 	GetByShareToken(token string) (*entity.Playlist, error)
 }
 
 type LikeService interface {
-	LikeAudio(userID uint, req request.LikeRequest) (*entity.Like, error)
-	UnlikeAudio(userID, audioID uint) error
-	GetLikedAudios(userID uint) ([]entity.Like, error)
+	Like(userID uint, req request.LikeRequest) (*entity.Like, error)
+	Unlike(userID uint, req request.UnlikeRequest) error
+	GetLikes(userID string, targetType string) ([]entity.Like, error)
+	CountByTarget(targetType string, targetID uint) (int64, error)
 }
 
 type HistoryService interface {

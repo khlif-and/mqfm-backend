@@ -55,13 +55,18 @@ CREATE TABLE IF NOT EXISTS audios (
 CREATE TABLE IF NOT EXISTS playlists (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT UNSIGNED NOT NULL,
+    creator_role VARCHAR(10) DEFAULT 'user',
     name VARCHAR(255) NOT NULL,
     image_url VARCHAR(500) DEFAULT '',
+    dominant_color VARCHAR(7) DEFAULT '',
+    share_token VARCHAR(64) DEFAULT '',
+    is_public BOOLEAN DEFAULT FALSE,
     created_at DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3),
     updated_at DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
     deleted_at DATETIME(3) NULL,
     INDEX idx_playlists_user_id (user_id),
-    INDEX idx_playlists_deleted_at (deleted_at)
+    INDEX idx_playlists_deleted_at (deleted_at),
+    UNIQUE INDEX idx_playlists_share_token (share_token)
 );
 
 CREATE TABLE IF NOT EXISTS playlist_audios (
@@ -73,9 +78,10 @@ CREATE TABLE IF NOT EXISTS playlist_audios (
 CREATE TABLE IF NOT EXISTS likes (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT UNSIGNED NOT NULL,
-    audio_id BIGINT UNSIGNED NOT NULL,
+    target_type VARCHAR(20) NOT NULL,
+    target_id BIGINT UNSIGNED NOT NULL,
     created_at DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3),
-    UNIQUE INDEX idx_user_audio (user_id, audio_id)
+    UNIQUE INDEX idx_like_unique (user_id, target_type, target_id)
 );
 
 CREATE TABLE IF NOT EXISTS histories (

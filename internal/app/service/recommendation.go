@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"math"
 	"sort"
 
@@ -195,7 +196,7 @@ func (s *recommendationService) GetPersonalized(userID uint, limit int) ([]entit
 		return s.GetOnboarding(limit)
 	}
 
-	likes, _ := s.likeRepo.FindByUser(userID)
+	likes, _ := s.likeRepo.FindByUser(userID, "audio")
 
 	listenedIDs := make(map[uint]bool)
 	var listenedAudios []*entity.Audio
@@ -206,7 +207,7 @@ func (s *recommendationService) GetPersonalized(userID uint, limit int) ([]entit
 		}
 	}
 	for _, l := range likes {
-		listenedIDs[l.AudioID] = true
+		listenedIDs[l.TargetID] = true
 		if l.Audio != nil {
 			listenedAudios = append(listenedAudios, l.Audio)
 		}
@@ -381,19 +382,86 @@ func extractAudiosFromScores(scores []entity.AudioScore) []entity.Audio {
 
 func (s *recommendationService) GetLocationBased(userID uint, limit int) ([]entity.Audio, error) {
 	loc, err := s.locationRepo.FindByUser(userID)
-	if err != nil || loc.City == "" {
+	if err != nil {
 		return s.GetPopular(limit)
 	}
 
-	audios, err := s.audioRepo.Search(loc.City)
-	if err != nil || len(audios) == 0 {
-		return s.GetPopular(limit)
+	if audios, err := s.getNearbyUsersAudios(userID, loc, limit); err == nil && len(audios) > 0 {
+		return audios, nil
 	}
 
-	if len(audios) > limit {
-		audios = audios[:limit]
+	if loc.City != "" {
+		audios, err := s.audioRepo.Search(loc.City)
+		if err == nil && len(audios) > 0 {
+			if len(audios) > limit {
+				audios = audios[:limit]
+			}
+			return audios, nil
+		}
 	}
-	return audios, nil
+
+	return s.GetPopular(limit)
+}
+
+func (s *recommendationService) getNearbyUsersAudios(currentUserID uint, loc *entity.UserLocation, limit int) ([]entity.Audio, error) {
+	allLocations, err := s.locationRepo.FindAll()
+	if err != nil {
+		return nil, err
+	}
+
+	const radiusKm = 50.0
+	var nearbyUserIDs []uint
+	for _, l := range allLocations {
+		if l.UserID == currentUserID {
+			continue
+		}
+		if haversineKm(loc.Latitude, loc.Longitude, l.Latitude, l.Longitude) <= radiusKm {
+			nearbyUserIDs = append(nearbyUserIDs, l.UserID)
+		}
+	}
+
+	if len(nearbyUserIDs) == 0 {
+		return nil, errors.New("no nearby users")
+	}
+
+	histories, err := s.historyRepo.FindByUsers(nearbyUserIDs)
+	if err != nil || len(histories) == 0 {
+		return nil, errors.New("no nearby history")
+	}
+
+	freq := make(map[uint]int64)
+	for _, h := range histories {
+		freq[h.AudioID] += int64(h.PlayCount)
+	}
+
+	type scored struct {
+		audioID uint
+		score   int64
+	}
+	var ranked []scored
+	for id, sc := range freq {
+		ranked = append(ranked, scored{id, sc})
+	}
+	sort.Slice(ranked, func(i, j int) bool { return ranked[i].score > ranked[j].score })
+	if len(ranked) > limit {
+		ranked = ranked[:limit]
+	}
+
+	ids := make([]uint, len(ranked))
+	for i, r := range ranked {
+		ids[i] = r.audioID
+	}
+	return s.audioRepo.FindByIDs(ids)
+}
+
+func haversineKm(lat1, lon1, lat2, lon2 float64) float64 {
+	const R = 6371.0
+	dLat := (lat2 - lat1) * math.Pi / 180
+	dLon := (lon2 - lon1) * math.Pi / 180
+	a := math.Sin(dLat/2)*math.Sin(dLat/2) +
+		math.Cos(lat1*math.Pi/180)*math.Cos(lat2*math.Pi/180)*
+			math.Sin(dLon/2)*math.Sin(dLon/2)
+	return R * 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
 }
 
 func (s *recommendationService) GetTimeBasedPersonalized(userID uint, hour int, limit int) ([]entity.Audio, error) {

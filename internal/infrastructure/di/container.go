@@ -23,6 +23,8 @@ type Container struct {
 	NotificationService   port.NotificationService
 	Cache                 port.CacheRepository
 	CacheManager          port.CacheManager
+	TokenStore            port.TokenStore
+	RankingCache          *cache.RankingCache
 }
 
 func NewContainer(db *gorm.DB, redisClient *redis.Client, cfg *config.Config) *Container {
@@ -55,14 +57,26 @@ func NewContainer(db *gorm.DB, redisClient *redis.Client, cfg *config.Config) *C
 	colorExtractorSvc := service.NewColorExtractorService()
 	audioConverter := helper.NewAudioConverter()
 
-	adminAuthSvc := service.NewAdminAuthService(adminRepo)
+	var cacheRepo port.CacheRepository
+	var cacheMgr port.CacheManager
+	var tokenStore port.TokenStore
+	var rankingCache *cache.RankingCache
+
+	if redisClient != nil {
+		cacheRepo = cache.NewRedisCache(redisClient)
+		cacheMgr = cache.NewCacheManager(cacheRepo, audioRepo)
+		tokenStore = cache.NewRedisTokenStore(redisClient)
+		rankingCache = cache.NewRankingCache(cacheRepo, audioScoreRepo)
+	}
+
+	adminAuthSvc := service.NewAdminAuthService(adminRepo, tokenStore)
 	categorySvc := service.NewCategoryService(categoryRepo)
 	audioSvc := service.NewAudioService(audioRepo, colorExtractorSvc)
-	playlistSvc := service.NewPlaylistService(playlistRepo)
+	playlistSvc := service.NewPlaylistService(playlistRepo, colorExtractorSvc)
 	likeSvc := service.NewLikeService(likeRepo)
 	historySvc := service.NewHistoryService(historyRepo)
 	otpSvc := service.NewOTPService(otpRepo, userRepo, emailSender)
-	userAuthSvc := service.NewUserAuthService(userRepo, otpRepo, otpSvc)
+	userAuthSvc := service.NewUserAuthService(userRepo, otpRepo, otpSvc, tokenStore)
 	recommendationSvc := service.NewRecommendationService(audioRepo, audioScoreRepo, historyRepo, likeRepo, locationRepo)
 	bookmarkSvc := service.NewBookmarkService(bookmarkRepo)
 	notificationSvc := service.NewNotificationService(notificationRepo)
@@ -80,17 +94,11 @@ func NewContainer(db *gorm.DB, redisClient *redis.Client, cfg *config.Config) *C
 	locationSvc := service.NewUserLocationService(locationRepo)
 	collabSvc := service.NewPlaylistCollabService(collabRepo, playlistRepo)
 
-	var cacheRepo port.CacheRepository
-	var cacheMgr port.CacheManager
-	if redisClient != nil {
-		cacheRepo = cache.NewRedisCache(redisClient)
-		cacheMgr = cache.NewCacheManager(cacheRepo, audioRepo)
-	}
-
 	handlers := &router.Handlers{
 		AdminAuth:      adminHandler.NewAuthHandler(adminAuthSvc),
 		AdminCategory:  adminHandler.NewCategoryHandler(categorySvc),
 		AdminAudio:     adminHandler.NewAudioHandler(audioSvc, historySvc),
+		AdminPlaylist:  adminHandler.NewPlaylistHandler(playlistSvc),
 		AdminEvent:     adminHandler.NewEventHandler(eventSvc),
 		AdminSeries:    adminHandler.NewSeriesHandler(seriesSvc),
 		UserAuth:       userHandler.NewAuthHandler(userAuthSvc),
@@ -122,5 +130,7 @@ func NewContainer(db *gorm.DB, redisClient *redis.Client, cfg *config.Config) *C
 		NotificationService:   notificationSvc,
 		Cache:                 cacheRepo,
 		CacheManager:          cacheMgr,
+		TokenStore:            tokenStore,
+		RankingCache:          rankingCache,
 	}
 }

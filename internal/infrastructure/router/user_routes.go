@@ -30,15 +30,17 @@ func registerUserRoutes(api *gin.RouterGroup, h *Handlers) {
 				playlists.GET("/search", h.UserPlaylist.Search)
 				playlists.GET("/:id", h.UserPlaylist.GetDetail)
 				playlists.POST("/", h.UserPlaylist.Create)
+				playlists.PUT("/:id", h.UserPlaylist.Update)
+				playlists.DELETE("/:id", h.UserPlaylist.Delete)
 				playlists.POST("/add-audio", h.UserPlaylist.AddAudio)
 				playlists.POST("/remove-audio", h.UserPlaylist.RemoveAudio)
-				playlists.POST("/:playlist_id/share", h.UserShare.SharePlaylist)
+				playlists.POST("/:id/share", h.UserPlaylist.Share)
 			}
 
 			likes := protected.Group("/likes")
 			{
 				likes.POST("/", h.UserLike.Like)
-				likes.DELETE("/:audio_id", h.UserLike.Unlike)
+				likes.DELETE("/", h.UserLike.Unlike)
 				likes.GET("/", h.UserLike.GetLikes)
 			}
 

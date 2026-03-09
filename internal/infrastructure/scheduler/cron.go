@@ -1,10 +1,12 @@
 package scheduler
 
 import (
+	"context"
 	"time"
 
 	"go.uber.org/zap"
 
+	"mqfm-backend/internal/adapter/cache"
 	"mqfm-backend/internal/domain/port"
 	"mqfm-backend/internal/shared/logger"
 )
@@ -46,6 +48,45 @@ func (s *ScoreRecalculator) Start() {
 			}
 		}
 	}()
+}
+
+type RankingScheduler struct {
+	rankingCache *cache.RankingCache
+}
+
+func NewRankingScheduler(rc *cache.RankingCache) *RankingScheduler {
+	return &RankingScheduler{rankingCache: rc}
+}
+
+func (s *RankingScheduler) Start() {
+	go s.rankingRefresh()
+	go s.popularRefresh()
+}
+
+func (s *RankingScheduler) rankingRefresh() {
+	logger.Info("scheduler started: ranking cache refresh every 5 hours")
+	ctx := context.Background()
+	_, _ = s.rankingCache.RefreshRanking(ctx)
+	for {
+		time.Sleep(5 * time.Hour)
+		logger.Info("scheduler: refreshing ranking cache")
+		if _, err := s.rankingCache.RefreshRanking(ctx); err != nil {
+			logger.Error("scheduler: ranking refresh failed", zap.Error(err))
+		}
+	}
+}
+
+func (s *RankingScheduler) popularRefresh() {
+	logger.Info("scheduler started: popular cache refresh every 7 hours")
+	ctx := context.Background()
+	_, _ = s.rankingCache.RefreshPopular(ctx)
+	for {
+		time.Sleep(7 * time.Hour)
+		logger.Info("scheduler: refreshing popular cache")
+		if _, err := s.rankingCache.RefreshPopular(ctx); err != nil {
+			logger.Error("scheduler: popular refresh failed", zap.Error(err))
+		}
+	}
 }
 
 type VotingScheduler struct {

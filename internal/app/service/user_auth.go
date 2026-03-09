@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,10 +23,11 @@ type userAuthService struct {
 	repo       port.UserRepository
 	otpRepo    port.OTPRepository
 	otpService port.OTPService
+	tokenStore port.TokenStore
 }
 
-func NewUserAuthService(repo port.UserRepository, otpRepo port.OTPRepository, otpSvc port.OTPService) port.UserAuthService {
-	return &userAuthService{repo: repo, otpRepo: otpRepo, otpService: otpSvc}
+func NewUserAuthService(repo port.UserRepository, otpRepo port.OTPRepository, otpSvc port.OTPService, tokenStore port.TokenStore) port.UserAuthService {
+	return &userAuthService{repo: repo, otpRepo: otpRepo, otpService: otpSvc, tokenStore: tokenStore}
 }
 
 func (s *userAuthService) Register(req request.UserRegisterRequest, file *multipart.FileHeader) (*entity.User, error) {
@@ -87,6 +89,10 @@ func (s *userAuthService) Login(req request.UserLoginRequest) (string, *entity.U
 	if err != nil {
 		logger.Error("failed to generate user token")
 		return "", nil, err
+	}
+
+	if s.tokenStore != nil {
+		_ = s.tokenStore.StoreToken(context.Background(), user.ID, constant.RoleUser, token, security.TokenTTL)
 	}
 
 	return token, user, nil
@@ -176,6 +182,10 @@ func (s *userAuthService) GoogleLogin(req request.GoogleLoginRequest) (string, *
 	if err != nil {
 		logger.Error("failed to generate google user token")
 		return "", nil, err
+	}
+
+	if s.tokenStore != nil {
+		_ = s.tokenStore.StoreToken(context.Background(), user.ID, constant.RoleUser, token, security.TokenTTL)
 	}
 
 	return token, user, nil

@@ -42,3 +42,10 @@ type CacheManager interface {
 	InvalidateAudio(ctx context.Context, audioID uint) error
 	WarmUp(ctx context.Context, key string, value interface{}, tier CacheTier) error
 }
+
+type TokenStore interface {
+	StoreToken(ctx context.Context, userID uint, role string, token string, ttl time.Duration) error
+	GetToken(ctx context.Context, userID uint, role string) (string, error)
+	DeleteToken(ctx context.Context, userID uint, role string) error
+	RefreshToken(ctx context.Context, userID uint, role string) (string, error)
+}

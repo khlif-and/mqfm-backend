@@ -33,6 +33,11 @@ func main() {
 	notifScheduler := scheduler.NewNotificationScheduler(container.NotificationService)
 	notifScheduler.Start()
 
+	if container.RankingCache != nil {
+		rankingScheduler := scheduler.NewRankingScheduler(container.RankingCache)
+		rankingScheduler.Start()
+	}
+
 	r := gin.New()
 	r.Use(gin.Recovery())
 

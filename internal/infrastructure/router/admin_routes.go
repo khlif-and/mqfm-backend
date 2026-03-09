@@ -33,6 +33,17 @@ func registerAdminRoutes(api *gin.RouterGroup, h *Handlers) {
 				audios.DELETE("/:id", h.AdminAudio.Delete)
 			}
 
+			playlists := protected.Group("/playlists")
+			{
+				playlists.GET("/", h.AdminPlaylist.GetAll)
+				playlists.GET("/:id", h.AdminPlaylist.GetDetail)
+				playlists.POST("/", h.AdminPlaylist.Create)
+				playlists.PUT("/:id", h.AdminPlaylist.Update)
+				playlists.DELETE("/:id", h.AdminPlaylist.Delete)
+				playlists.POST("/add-audio", h.AdminPlaylist.AddAudio)
+				playlists.POST("/remove-audio", h.AdminPlaylist.RemoveAudio)
+			}
+
 			events := protected.Group("/events")
 			{
 				events.POST("/", h.AdminEvent.Create)

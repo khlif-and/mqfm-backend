@@ -49,7 +49,7 @@ func (h *ShareHandler) SharePlaylist(c *gin.Context) {
 		return
 	}
 
-	token, err := h.playlistSvc.SharePlaylist(userID, playlistID)
+	token, err := h.playlistSvc.SharePlaylist(playlistID)
 	if err != nil {
 		resp.Error(c, http.StatusBadRequest, constant.MsgShareFail, err.Error())
 		return
