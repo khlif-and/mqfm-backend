@@ -20,4 +20,18 @@ func registerPublicRoutes(api *gin.RouterGroup, h *Handlers) {
 		audios.GET("/search", h.AdminAudio.Search)
 		audios.GET("/:id", middleware.OptionalJWTAuth(), h.AdminAudio.FindByID)
 	}
+
+	shared := api.Group("/shared")
+	{
+		shared.GET("/clip/:token", h.UserClip.GetByShareToken)
+		shared.GET("/playlist/:token", h.UserShare.GetSharedPlaylist)
+	}
+
+	api.GET("/series", h.AdminSeries.FindAll)
+	api.GET("/series/search", h.AdminSeries.Search)
+	api.GET("/series/:id", h.AdminSeries.FindByID)
+	api.GET("/events/upcoming", middleware.OptionalJWTAuth(), h.UserEvent.GetUpcoming)
+	api.GET("/events/:id", middleware.OptionalJWTAuth(), h.UserEvent.GetByID)
+	api.GET("/votes/ranking/weekly", h.UserVote.WeeklyRanking)
+	api.GET("/votes/ranking/monthly", h.UserVote.MonthlyRanking)
 }

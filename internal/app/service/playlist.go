@@ -3,6 +3,8 @@ package service
 import (
 	"errors"
 
+	"github.com/google/uuid"
+
 	"mqfm-backend/internal/domain/entity"
 	"mqfm-backend/internal/domain/port"
 	"mqfm-backend/internal/shared/constant"
@@ -68,4 +70,43 @@ func (s *playlistService) AddAudioToPlaylist(userID, playlistID, audioID uint) e
 	}
 
 	return s.repo.AddAudio(playlist, audio)
+}
+
+func (s *playlistService) RemoveAudioFromPlaylist(userID, playlistID, audioID uint) error {
+	playlist, err := s.repo.FindByID(playlistID, userID)
+	if err != nil {
+		return errors.New(constant.MsgPlaylistNotFound)
+	}
+
+	audio, err := s.repo.FindAudioByID(audioID)
+	if err != nil {
+		return errors.New(constant.MsgAudioNotFound)
+	}
+
+	return s.repo.RemoveAudio(playlist, audio)
+}
+
+func (s *playlistService) SharePlaylist(userID, playlistID uint) (string, error) {
+	playlist, err := s.repo.FindByID(playlistID, userID)
+	if err != nil {
+		return "", errors.New(constant.MsgPlaylistNotFound)
+	}
+
+	if playlist.ShareToken != "" {
+		return playlist.ShareToken, nil
+	}
+
+	token := uuid.New().String()
+	if err := s.repo.Update(playlistID, map[string]interface{}{
+		"share_token": token,
+		"is_public":   true,
+	}); err != nil {
+		return "", err
+	}
+
+	return token, nil
+}
+
+func (s *playlistService) GetByShareToken(token string) (*entity.Playlist, error) {
+	return s.repo.FindByShareToken(token)
 }

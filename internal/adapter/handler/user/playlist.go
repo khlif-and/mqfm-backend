@@ -161,3 +161,27 @@ func (h *PlaylistHandler) GetDetail(c *gin.Context) {
 
 	resp.Success(c, http.StatusOK, constant.MsgPlaylistGetOK, playlist)
 }
+
+func (h *PlaylistHandler) RemoveAudio(c *gin.Context) {
+	var input struct {
+		AudioID    uint `json:"audio_id" binding:"required"`
+		PlaylistID uint `json:"playlist_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		resp.Error(c, http.StatusBadRequest, constant.MsgInvalidInput, err.Error())
+		return
+	}
+
+	userID := security.GetUserID(c)
+	if userID == 0 {
+		resp.Error(c, http.StatusUnauthorized, constant.MsgUnauthorized, nil)
+		return
+	}
+
+	if err := h.service.RemoveAudioFromPlaylist(userID, input.PlaylistID, input.AudioID); err != nil {
+		resp.Error(c, http.StatusBadRequest, constant.MsgPlaylistRemoveAudioFail, err.Error())
+		return
+	}
+
+	resp.Success(c, http.StatusOK, constant.MsgPlaylistRemoveAudioOK, nil)
+}

@@ -2,6 +2,7 @@ package mysql
 
 import (
 	"errors"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -88,4 +89,26 @@ func (r *audioRepo) FindAllActive() ([]entity.Audio, error) {
 	var audios []entity.Audio
 	err := r.db.Where("status = 'active'").Find(&audios).Error
 	return audios, err
+}
+
+func (r *audioRepo) FindBySeriesID(seriesID uint) ([]entity.Audio, error) {
+	var audios []entity.Audio
+	err := r.db.Where("series_id = ? AND status = 'active'", seriesID).Find(&audios).Error
+	return audios, err
+}
+
+func (r *audioRepo) FindNewByArtists(artists []string, since time.Time) ([]entity.Audio, error) {
+	var audios []entity.Audio
+	if len(artists) == 0 {
+		return audios, nil
+	}
+	err := r.db.Where("artist IN ? AND status = 'active' AND created_at > ?", artists, since).
+		Order("created_at DESC").Find(&audios).Error
+	return audios, err
+}
+
+func (r *audioRepo) CountAll() (int64, error) {
+	var count int64
+	err := r.db.Model(&entity.Audio{}).Count(&count).Error
+	return count, err
 }
