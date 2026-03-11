@@ -13,11 +13,11 @@ import (
 	admin "mqfm-backend/internal/adapter/handler/admin"
 	"mqfm-backend/internal/domain/entity"
 	"mqfm-backend/internal/shared/dto/request"
-	"mqfm-backend/tests/mocks"
+	categorymock "mqfm-backend/tests/mocks/category"
 	"mqfm-backend/tests/testutil"
 )
 
-func setupCategoryRouter(service *mocks.MockCategoryService) *gin.Engine {
+func setupCategoryRouter(service *categorymock.MockCategoryService) *gin.Engine {
 	r := testutil.SetupRouter()
 	handler := admin.NewCategoryHandler(service)
 
@@ -31,7 +31,7 @@ func setupCategoryRouter(service *mocks.MockCategoryService) *gin.Engine {
 }
 
 func TestCategoryHandler_Create_Success(t *testing.T) {
-	service := &mocks.MockCategoryService{
+	service := &categorymock.MockCategoryService{
 		CreateFn: func(req request.CreateCategoryRequest, file *multipart.FileHeader) (*entity.Category, error) {
 			return &entity.Category{
 				ID: 1, Name: req.Name,
@@ -51,7 +51,7 @@ func TestCategoryHandler_Create_Success(t *testing.T) {
 }
 
 func TestCategoryHandler_Create_InvalidInput(t *testing.T) {
-	service := &mocks.MockCategoryService{}
+	service := &categorymock.MockCategoryService{}
 	r := setupCategoryRouter(service)
 
 	req, _ := testutil.MakeMultipartRequest("POST", "/categories", map[string]string{})
@@ -61,7 +61,7 @@ func TestCategoryHandler_Create_InvalidInput(t *testing.T) {
 }
 
 func TestCategoryHandler_FindAll_Success(t *testing.T) {
-	service := &mocks.MockCategoryService{
+	service := &categorymock.MockCategoryService{
 		FindAllFn: func() ([]entity.Category, error) {
 			return []entity.Category{
 				{ID: 1, Name: "Fiqih", CreatedAt: time.Now(), UpdatedAt: time.Now()},
@@ -81,7 +81,7 @@ func TestCategoryHandler_FindAll_Success(t *testing.T) {
 }
 
 func TestCategoryHandler_FindAll_Error(t *testing.T) {
-	service := &mocks.MockCategoryService{
+	service := &categorymock.MockCategoryService{
 		FindAllFn: func() ([]entity.Category, error) {
 			return nil, errors.New("db error")
 		},
@@ -95,7 +95,7 @@ func TestCategoryHandler_FindAll_Error(t *testing.T) {
 }
 
 func TestCategoryHandler_FindByID_Success(t *testing.T) {
-	service := &mocks.MockCategoryService{
+	service := &categorymock.MockCategoryService{
 		FindByIDFn: func(id uint) (*entity.Category, error) {
 			return &entity.Category{
 				ID: id, Name: "Fiqih",
@@ -112,7 +112,7 @@ func TestCategoryHandler_FindByID_Success(t *testing.T) {
 }
 
 func TestCategoryHandler_FindByID_InvalidID(t *testing.T) {
-	service := &mocks.MockCategoryService{}
+	service := &categorymock.MockCategoryService{}
 	r := setupCategoryRouter(service)
 
 	req := testutil.MakeRequest("GET", "/categories/abc", nil)
@@ -122,7 +122,7 @@ func TestCategoryHandler_FindByID_InvalidID(t *testing.T) {
 }
 
 func TestCategoryHandler_FindByID_NotFound(t *testing.T) {
-	service := &mocks.MockCategoryService{
+	service := &categorymock.MockCategoryService{
 		FindByIDFn: func(id uint) (*entity.Category, error) {
 			return nil, errors.New("not found")
 		},
@@ -136,7 +136,7 @@ func TestCategoryHandler_FindByID_NotFound(t *testing.T) {
 }
 
 func TestCategoryHandler_Delete_Success(t *testing.T) {
-	service := &mocks.MockCategoryService{
+	service := &categorymock.MockCategoryService{
 		DeleteFn: func(id uint) error { return nil },
 	}
 
@@ -148,7 +148,7 @@ func TestCategoryHandler_Delete_Success(t *testing.T) {
 }
 
 func TestCategoryHandler_Delete_Error(t *testing.T) {
-	service := &mocks.MockCategoryService{
+	service := &categorymock.MockCategoryService{
 		DeleteFn: func(id uint) error { return errors.New("cannot delete") },
 	}
 
@@ -160,7 +160,7 @@ func TestCategoryHandler_Delete_Error(t *testing.T) {
 }
 
 func TestCategoryHandler_Search_Success(t *testing.T) {
-	service := &mocks.MockCategoryService{
+	service := &categorymock.MockCategoryService{
 		SearchFn: func(query string) ([]entity.Category, error) {
 			return []entity.Category{
 				{ID: 1, Name: "Fiqih", CreatedAt: time.Now(), UpdatedAt: time.Now()},
@@ -176,7 +176,7 @@ func TestCategoryHandler_Search_Success(t *testing.T) {
 }
 
 func TestCategoryHandler_Search_Empty(t *testing.T) {
-	service := &mocks.MockCategoryService{}
+	service := &categorymock.MockCategoryService{}
 	r := setupCategoryRouter(service)
 
 	req := testutil.MakeRequest("GET", "/categories/search", nil)

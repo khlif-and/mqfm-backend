@@ -41,6 +41,9 @@ func (s *userPreferenceService) Update(userID uint, req request.UpdatePreference
 	if req.AutoDownloadWifi != nil {
 		pref.AutoDownloadWifi = *req.AutoDownloadWifi
 	}
+	if req.AutoDownloadOnLike != nil {
+		pref.AutoDownloadOnLike = *req.AutoDownloadOnLike
+	}
 
 	if err := s.repo.Upsert(pref); err != nil {
 		return nil, err

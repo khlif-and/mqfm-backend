@@ -17,10 +17,11 @@ import (
 
 type VoteHandler struct {
 	service port.AudioVoteService
+	scoreRepo port.AudioScoreRepository
 }
 
-func NewVoteHandler(s port.AudioVoteService) *VoteHandler {
-	return &VoteHandler{service: s}
+func NewVoteHandler(s port.AudioVoteService, sr port.AudioScoreRepository) *VoteHandler {
+	return &VoteHandler{service: s, scoreRepo: sr}
 }
 
 func (h *VoteHandler) Vote(c *gin.Context) {
@@ -67,25 +68,26 @@ func (h *VoteHandler) Unvote(c *gin.Context) {
 
 func (h *VoteHandler) WeeklyRanking(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	if limit > 20 {
+		limit = 20
+	}
 
-	rankings, err := h.service.GetWeeklyRanking(limit)
+	scores, err := h.scoreRepo.FindTopByWeeklyLikes(limit)
 	if err != nil {
 		resp.Error(c, http.StatusInternalServerError, constant.MsgRankingFail, err.Error())
 		return
 	}
 
 	var result []response.RankingResponse
-	for _, r := range rankings {
+	for i, s := range scores {
 		item := response.RankingResponse{
-			Rank:         r.WeeklyRank,
-			AudioID:      r.AudioID,
-			WeeklyVotes:  r.WeeklyVotes,
-			MonthlyVotes: r.MonthlyVotes,
-			TotalVotes:   r.TotalVotes,
-			UpdatedAt:    r.UpdatedAt,
+			Rank:      i + 1,
+			AudioID:   s.AudioID,
+			Likes:     s.TotalLikes,
+			UpdatedAt: s.UpdatedAt,
 		}
-		if r.Audio != nil {
-			ar := toAudioResponseVal(*r.Audio)
+		if s.Audio != nil {
+			ar := toAudioResponseVal(*s.Audio)
 			item.Audio = &ar
 		}
 		result = append(result, item)
@@ -96,25 +98,26 @@ func (h *VoteHandler) WeeklyRanking(c *gin.Context) {
 
 func (h *VoteHandler) MonthlyRanking(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	if limit > 20 {
+		limit = 20
+	}
 
-	rankings, err := h.service.GetMonthlyRanking(limit)
+	scores, err := h.scoreRepo.FindTopByLikes(limit, 35000)
 	if err != nil {
 		resp.Error(c, http.StatusInternalServerError, constant.MsgRankingFail, err.Error())
 		return
 	}
 
 	var result []response.RankingResponse
-	for _, r := range rankings {
+	for i, s := range scores {
 		item := response.RankingResponse{
-			Rank:         r.MonthlyRank,
-			AudioID:      r.AudioID,
-			WeeklyVotes:  r.WeeklyVotes,
-			MonthlyVotes: r.MonthlyVotes,
-			TotalVotes:   r.TotalVotes,
-			UpdatedAt:    r.UpdatedAt,
+			Rank:      i + 1,
+			AudioID:   s.AudioID,
+			Likes:     s.TotalLikes,
+			UpdatedAt: s.UpdatedAt,
 		}
-		if r.Audio != nil {
-			ar := toAudioResponseVal(*r.Audio)
+		if s.Audio != nil {
+			ar := toAudioResponseVal(*s.Audio)
 			item.Audio = &ar
 		}
 		result = append(result, item)

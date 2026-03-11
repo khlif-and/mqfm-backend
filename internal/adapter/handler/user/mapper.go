@@ -21,6 +21,8 @@ func toAudioResponseVal(a entity.Audio) response.AudioResponse {
 		Description:   a.Description,
 		FilePath:      a.FilePath,
 		Duration:      a.Duration,
+		DurationFmt:   response.FormatDuration(a.Duration),
+		FileSize:      a.FileSize,
 		Status:        a.Status,
 		CategoryID:    a.CategoryID,
 		Thumbnail:     a.Thumbnail,

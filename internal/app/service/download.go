@@ -9,6 +9,8 @@ import (
 	"mqfm-backend/internal/shared/dto/request"
 )
 
+const downloadExpiry = 30 * 24 * time.Hour
+
 type downloadService struct {
 	repo          port.DownloadRepository
 	audioRepo     port.AudioRepository
@@ -35,9 +37,11 @@ func (s *downloadService) RecordDownload(userID uint, req request.DownloadReques
 	}
 
 	download := &entity.Download{
-		UserID:   userID,
-		AudioID:  req.AudioID,
-		FileSize: audio.FileSize,
+		UserID:     userID,
+		AudioID:    req.AudioID,
+		PlaylistID: req.PlaylistID,
+		FileSize:   audio.FileSize,
+		ExpiresAt:  time.Now().Add(downloadExpiry),
 	}
 	if req.FileSize > 0 {
 		download.FileSize = req.FileSize
@@ -46,6 +50,8 @@ func (s *downloadService) RecordDownload(userID uint, req request.DownloadReques
 	if err := s.repo.Create(download); err != nil {
 		return nil, err
 	}
+
+	download.Audio = audio
 	return download, nil
 }
 
@@ -74,4 +80,8 @@ func (s *downloadService) GetNewFromFavorites(userID uint) ([]entity.Audio, erro
 
 	since := time.Now().AddDate(0, 0, -7)
 	return s.audioRepo.FindNewByArtists(artists, since)
+}
+
+func (s *downloadService) CleanupExpired() (int64, error) {
+	return s.repo.DeleteExpired()
 }

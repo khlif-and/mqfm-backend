@@ -85,6 +85,27 @@ func (r *likeRepo) AggregateLikeCounts() (map[uint]int64, error) {
 	return m, nil
 }
 
+func (r *likeRepo) AggregateWeeklyLikeCounts(since time.Time) (map[uint]int64, error) {
+	type result struct {
+		TargetID uint  `gorm:"column:target_id"`
+		Total    int64 `gorm:"column:total"`
+	}
+	var results []result
+	err := r.db.Model(&entity.Like{}).
+		Select("target_id, COUNT(*) as total").
+		Where("target_type = ? AND created_at >= ?", "audio", since).
+		Group("target_id").
+		Scan(&results).Error
+	if err != nil {
+		return nil, err
+	}
+	m := make(map[uint]int64, len(results))
+	for _, r := range results {
+		m[r.TargetID] = r.Total
+	}
+	return m, nil
+}
+
 type historyRepo struct {
 	db *gorm.DB
 }

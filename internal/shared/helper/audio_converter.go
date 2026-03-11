@@ -2,8 +2,10 @@ package helper
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"mqfm-backend/internal/shared/logger"
@@ -28,6 +30,32 @@ func (c *AudioConverter) ConvertToOGG(inputPath string) (string, error) {
 	}
 
 	return outputPath, nil
+}
+
+func ExtractAudioDuration(filePath string) int {
+	cmd := exec.Command("ffprobe",
+		"-v", "error",
+		"-show_entries", "format=duration",
+		"-of", "default=noprint_wrappers=1:nokey=1",
+		filePath,
+	)
+	out, err := cmd.Output()
+	if err != nil {
+		return 0
+	}
+	secs, err := strconv.ParseFloat(strings.TrimSpace(string(out)), 64)
+	if err != nil {
+		return 0
+	}
+	return int(secs)
+}
+
+func GetFileSize(filePath string) int64 {
+	info, err := os.Stat(filePath)
+	if err != nil {
+		return 0
+	}
+	return info.Size()
 }
 
 func (c *AudioConverter) CreateClip(inputPath string, startSec, endSec int) (string, error) {

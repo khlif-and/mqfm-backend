@@ -9,11 +9,11 @@ import (
 	"mqfm-backend/internal/app/service"
 	"mqfm-backend/internal/domain/entity"
 	"mqfm-backend/internal/shared/dto/request"
-	"mqfm-backend/tests/mocks"
+	bookmarkmock "mqfm-backend/tests/mocks/bookmark"
 )
 
 func TestBookmarkCreate_Success(t *testing.T) {
-	repo := &mocks.MockBookmarkRepository{
+	repo := &bookmarkmock.MockBookmarkRepository{
 		CreateFn: func(bookmark *entity.Bookmark) error {
 			bookmark.ID = 1
 			return nil
@@ -36,7 +36,7 @@ func TestBookmarkCreate_Success(t *testing.T) {
 }
 
 func TestBookmarkCreate_Error(t *testing.T) {
-	repo := &mocks.MockBookmarkRepository{
+	repo := &bookmarkmock.MockBookmarkRepository{
 		CreateFn: func(bookmark *entity.Bookmark) error {
 			return errors.New("db error")
 		},
@@ -50,7 +50,7 @@ func TestBookmarkCreate_Error(t *testing.T) {
 }
 
 func TestBookmarkGetByUser_Success(t *testing.T) {
-	repo := &mocks.MockBookmarkRepository{
+	repo := &bookmarkmock.MockBookmarkRepository{
 		FindByUserFn: func(userID uint) ([]entity.Bookmark, error) {
 			return []entity.Bookmark{
 				{ID: 1, UserID: userID, AudioID: 10},
@@ -67,7 +67,7 @@ func TestBookmarkGetByUser_Success(t *testing.T) {
 }
 
 func TestBookmarkGetByUserAndAudio_Success(t *testing.T) {
-	repo := &mocks.MockBookmarkRepository{
+	repo := &bookmarkmock.MockBookmarkRepository{
 		FindByUserAndAudioFn: func(userID, audioID uint) ([]entity.Bookmark, error) {
 			return []entity.Bookmark{
 				{ID: 1, UserID: userID, AudioID: audioID, PositionSeconds: 60},
@@ -83,7 +83,7 @@ func TestBookmarkGetByUserAndAudio_Success(t *testing.T) {
 }
 
 func TestBookmarkDelete_Success(t *testing.T) {
-	repo := &mocks.MockBookmarkRepository{
+	repo := &bookmarkmock.MockBookmarkRepository{
 		DeleteFn: func(id, userID uint) error { return nil },
 	}
 

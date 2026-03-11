@@ -9,11 +9,11 @@ import (
 "mqfm-backend/internal/app/service"
 "mqfm-backend/internal/domain/entity"
 "mqfm-backend/internal/shared/dto/request"
-"mqfm-backend/tests/mocks"
+	likemock "mqfm-backend/tests/mocks/like"
 )
 
 func TestLike_Success(t *testing.T) {
-repo := &mocks.MockLikeRepository{
+repo := &likemock.MockLikeRepository{
 ExistsFn: func(userID uint, targetType string, targetID uint) (bool, error) { return false, nil },
 CreateFn: func(like *entity.Like) error { like.ID = 1; return nil },
 }
@@ -27,7 +27,7 @@ assert.Equal(t, "audio", like.TargetType)
 }
 
 func TestLike_AlreadyLiked(t *testing.T) {
-repo := &mocks.MockLikeRepository{
+repo := &likemock.MockLikeRepository{
 ExistsFn: func(userID uint, targetType string, targetID uint) (bool, error) { return true, nil },
 }
 svc := service.NewLikeService(repo)
@@ -37,7 +37,7 @@ assert.Nil(t, like)
 }
 
 func TestLike_DbError(t *testing.T) {
-repo := &mocks.MockLikeRepository{
+repo := &likemock.MockLikeRepository{
 ExistsFn: func(userID uint, targetType string, targetID uint) (bool, error) {
 return false, errors.New("db error")
 },
@@ -49,7 +49,7 @@ assert.Nil(t, like)
 }
 
 func TestUnlike_Success(t *testing.T) {
-repo := &mocks.MockLikeRepository{
+repo := &likemock.MockLikeRepository{
 DeleteFn: func(userID uint, targetType string, targetID uint) error { return nil },
 }
 svc := service.NewLikeService(repo)
@@ -58,7 +58,7 @@ assert.NoError(t, err)
 }
 
 func TestGetLikes_Success(t *testing.T) {
-repo := &mocks.MockLikeRepository{
+repo := &likemock.MockLikeRepository{
 FindByUserFn: func(userID uint, targetType string) ([]entity.Like, error) {
 return []entity.Like{
 {ID: 1, UserID: userID, TargetType: targetType, TargetID: 10},
@@ -73,7 +73,7 @@ assert.Len(t, likes, 2)
 }
 
 func TestGetLikes_Empty(t *testing.T) {
-repo := &mocks.MockLikeRepository{
+repo := &likemock.MockLikeRepository{
 FindByUserFn: func(userID uint, targetType string) ([]entity.Like, error) {
 return []entity.Like{}, nil
 },
@@ -85,7 +85,7 @@ assert.Empty(t, likes)
 }
 
 func TestCountByTarget_Success(t *testing.T) {
-repo := &mocks.MockLikeRepository{
+repo := &likemock.MockLikeRepository{
 CountByTargetFn: func(targetType string, targetID uint) (int64, error) { return 42, nil },
 }
 svc := service.NewLikeService(repo)

@@ -67,6 +67,7 @@ type LikeRepository interface {
 	Exists(userID uint, targetType string, targetID uint) (bool, error)
 	CountByTarget(targetType string, targetID uint) (int64, error)
 	AggregateLikeCounts() (map[uint]int64, error)
+	AggregateWeeklyLikeCounts(since time.Time) (map[uint]int64, error)
 }
 
 type HistoryRepository interface {
@@ -92,10 +93,12 @@ type AudioScoreRepository interface {
 	Upsert(score *entity.AudioScore) error
 	FindTopByScore(limit int) ([]entity.AudioScore, error)
 	FindTopByLikes(limit int, maxLikes int64) ([]entity.AudioScore, error)
+	FindTopByWeeklyLikes(limit int) ([]entity.AudioScore, error)
 	FindByAudioID(audioID uint) (*entity.AudioScore, error)
 	FindByAudioIDs(audioIDs []uint) ([]entity.AudioScore, error)
 	DeleteAll() error
 	BulkUpsert(scores []entity.AudioScore) error
+	BulkUpdateWeeklyLikes(data map[uint]int64) error
 }
 
 type BookmarkRepository interface {
@@ -132,6 +135,7 @@ type DownloadRepository interface {
 	Delete(id, userID uint) error
 	Exists(userID, audioID uint) (bool, error)
 	SumSizeByUser(userID uint) (int64, error)
+	DeleteExpired() (int64, error)
 }
 
 type ListeningStatRepository interface {

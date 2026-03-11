@@ -8,6 +8,7 @@ type AudioScore struct {
 	Audio       *Audio    `gorm:"foreignKey:AudioID" json:"audio,omitempty"`
 	TotalPlays  int64     `gorm:"default:0" json:"total_plays"`
 	TotalLikes  int64     `gorm:"default:0" json:"total_likes"`
+	WeeklyLikes int64     `gorm:"default:0;index:idx_weekly_likes" json:"weekly_likes"`
 	WeightScore float64   `gorm:"default:0;index:idx_weight_score" json:"weight_score"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }

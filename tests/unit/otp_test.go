@@ -9,17 +9,17 @@ import (
 
 	"mqfm-backend/internal/app/service"
 	"mqfm-backend/internal/domain/entity"
-	"mqfm-backend/tests/mocks"
+	authmock "mqfm-backend/tests/mocks/auth"
 )
 
 func TestOTPSendOTP_Success(t *testing.T) {
 	var sentEmail string
-	otpRepo := &mocks.MockOTPRepository{
+	otpRepo := &authmock.MockOTPRepository{
 		CountRecentFn: func(email string, since time.Time) (int64, error) { return 0, nil },
 		CreateFn:      func(otp *entity.OTP) error { return nil },
 	}
-	userRepo := &mocks.MockUserRepository{}
-	emailSvc := &mocks.MockEmailService{
+	userRepo := &authmock.MockUserRepository{}
+	emailSvc := &authmock.MockEmailService{
 		SendAsyncFn: func(to, subject, body string) { sentEmail = to },
 	}
 
@@ -31,11 +31,11 @@ func TestOTPSendOTP_Success(t *testing.T) {
 }
 
 func TestOTPSendOTP_RateLimited(t *testing.T) {
-	otpRepo := &mocks.MockOTPRepository{
+	otpRepo := &authmock.MockOTPRepository{
 		CountRecentFn: func(email string, since time.Time) (int64, error) { return 3, nil },
 	}
-	userRepo := &mocks.MockUserRepository{}
-	emailSvc := &mocks.MockEmailService{}
+	userRepo := &authmock.MockUserRepository{}
+	emailSvc := &authmock.MockEmailService{}
 
 	svc := service.NewOTPService(otpRepo, userRepo, emailSvc)
 	err := svc.SendOTP("test@test.com")
@@ -45,7 +45,7 @@ func TestOTPSendOTP_RateLimited(t *testing.T) {
 }
 
 func TestOTPVerifyOTP_Success(t *testing.T) {
-	otpRepo := &mocks.MockOTPRepository{
+	otpRepo := &authmock.MockOTPRepository{
 		FindLatestFn: func(email string) (*entity.OTP, error) {
 			return &entity.OTP{
 				ID:        1,
@@ -56,13 +56,13 @@ func TestOTPVerifyOTP_Success(t *testing.T) {
 		},
 		MarkVerifiedFn: func(id uint) error { return nil },
 	}
-	userRepo := &mocks.MockUserRepository{
+	userRepo := &authmock.MockUserRepository{
 		FindByEmailFn: func(email string) (*entity.User, error) {
 			return &entity.User{ID: 1, Email: email}, nil
 		},
 		UpdateFn: func(id uint, updates map[string]interface{}) error { return nil },
 	}
-	emailSvc := &mocks.MockEmailService{}
+	emailSvc := &authmock.MockEmailService{}
 
 	svc := service.NewOTPService(otpRepo, userRepo, emailSvc)
 	user, err := svc.VerifyOTP("test@test.com", "123456")
@@ -73,7 +73,7 @@ func TestOTPVerifyOTP_Success(t *testing.T) {
 }
 
 func TestOTPVerifyOTP_Invalid(t *testing.T) {
-	otpRepo := &mocks.MockOTPRepository{
+	otpRepo := &authmock.MockOTPRepository{
 		FindLatestFn: func(email string) (*entity.OTP, error) {
 			return &entity.OTP{
 				Code:      "123456",
@@ -81,8 +81,8 @@ func TestOTPVerifyOTP_Invalid(t *testing.T) {
 			}, nil
 		},
 	}
-	userRepo := &mocks.MockUserRepository{}
-	emailSvc := &mocks.MockEmailService{}
+	userRepo := &authmock.MockUserRepository{}
+	emailSvc := &authmock.MockEmailService{}
 
 	svc := service.NewOTPService(otpRepo, userRepo, emailSvc)
 	user, err := svc.VerifyOTP("test@test.com", "000000")
@@ -92,7 +92,7 @@ func TestOTPVerifyOTP_Invalid(t *testing.T) {
 }
 
 func TestOTPVerifyOTP_Expired(t *testing.T) {
-	otpRepo := &mocks.MockOTPRepository{
+	otpRepo := &authmock.MockOTPRepository{
 		FindLatestFn: func(email string) (*entity.OTP, error) {
 			return &entity.OTP{
 				Code:      "123456",
@@ -100,8 +100,8 @@ func TestOTPVerifyOTP_Expired(t *testing.T) {
 			}, nil
 		},
 	}
-	userRepo := &mocks.MockUserRepository{}
-	emailSvc := &mocks.MockEmailService{}
+	userRepo := &authmock.MockUserRepository{}
+	emailSvc := &authmock.MockEmailService{}
 
 	svc := service.NewOTPService(otpRepo, userRepo, emailSvc)
 	user, err := svc.VerifyOTP("test@test.com", "123456")
@@ -111,13 +111,13 @@ func TestOTPVerifyOTP_Expired(t *testing.T) {
 }
 
 func TestOTPVerifyOTP_NotFound(t *testing.T) {
-	otpRepo := &mocks.MockOTPRepository{
+	otpRepo := &authmock.MockOTPRepository{
 		FindLatestFn: func(email string) (*entity.OTP, error) {
 			return nil, errors.New("not found")
 		},
 	}
-	userRepo := &mocks.MockUserRepository{}
-	emailSvc := &mocks.MockEmailService{}
+	userRepo := &authmock.MockUserRepository{}
+	emailSvc := &authmock.MockEmailService{}
 
 	svc := service.NewOTPService(otpRepo, userRepo, emailSvc)
 	user, err := svc.VerifyOTP("test@test.com", "123456")

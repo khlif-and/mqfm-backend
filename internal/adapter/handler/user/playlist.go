@@ -79,6 +79,44 @@ func (h *PlaylistHandler) Create(c *gin.Context) {
 	resp.Success(c, http.StatusCreated, constant.MsgPlaylistCreateOK, h.toResponse(&playlist))
 }
 
+func (h *PlaylistHandler) CreateFromAudio(c *gin.Context) {
+	var input request.CreatePlaylistFromAudioRequest
+	if err := c.ShouldBindJSON(&input); err != nil {
+		resp.Error(c, http.StatusBadRequest, constant.MsgInvalidInput, err.Error())
+		return
+	}
+
+	userID := security.GetUserID(c)
+	if userID == 0 {
+		resp.Error(c, http.StatusUnauthorized, constant.MsgUnauthorized, nil)
+		return
+	}
+
+	playlist := entity.Playlist{
+		UserID:      userID,
+		CreatorRole: "user",
+		Name:        input.Name,
+	}
+
+	if err := h.service.Create(&playlist, nil); err != nil {
+		resp.Error(c, http.StatusInternalServerError, constant.MsgPlaylistCreateFail, err.Error())
+		return
+	}
+
+	if err := h.service.AddAudioToPlaylist(playlist.ID, input.AudioID); err != nil {
+		resp.Error(c, http.StatusBadRequest, constant.MsgPlaylistAddAudioFail, err.Error())
+		return
+	}
+
+	updated, err := h.service.GetByID(playlist.ID)
+	if err != nil {
+		resp.Error(c, http.StatusInternalServerError, constant.MsgPlaylistNotFound, err.Error())
+		return
+	}
+
+	resp.Success(c, http.StatusCreated, constant.MsgPlaylistCreateOK, h.toResponse(updated))
+}
+
 func (h *PlaylistHandler) GetMyPlaylists(c *gin.Context) {
 	userID := security.GetUserID(c)
 	if userID == 0 {
@@ -341,6 +379,8 @@ func (h *PlaylistHandler) toResponse(p *entity.Playlist) response.PlaylistRespon
 			Artist:        a.Artist,
 			FilePath:      a.FilePath,
 			Duration:      a.Duration,
+			DurationFmt:   response.FormatDuration(a.Duration),
+			FileSize:      a.FileSize,
 			Status:        a.Status,
 			CategoryID:    a.CategoryID,
 			Thumbnail:     a.Thumbnail,

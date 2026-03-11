@@ -9,11 +9,11 @@ import (
 	"mqfm-backend/internal/app/service"
 	"mqfm-backend/internal/domain/entity"
 	"mqfm-backend/internal/shared/dto/request"
-	"mqfm-backend/tests/mocks"
+	categorymock "mqfm-backend/tests/mocks/category"
 )
 
 func TestCategoryCreate_Success(t *testing.T) {
-	repo := &mocks.MockCategoryRepository{
+	repo := &categorymock.MockCategoryRepository{
 		CreateFn: func(category *entity.Category) error {
 			category.ID = 1
 			return nil
@@ -29,7 +29,7 @@ func TestCategoryCreate_Success(t *testing.T) {
 }
 
 func TestCategoryCreate_DuplicateName(t *testing.T) {
-	repo := &mocks.MockCategoryRepository{
+	repo := &categorymock.MockCategoryRepository{
 		CreateFn: func(category *entity.Category) error {
 			return errors.New("duplicate entry")
 		},
@@ -43,7 +43,7 @@ func TestCategoryCreate_DuplicateName(t *testing.T) {
 }
 
 func TestCategoryFindAll_Success(t *testing.T) {
-	repo := &mocks.MockCategoryRepository{
+	repo := &categorymock.MockCategoryRepository{
 		FindAllFn: func() ([]entity.Category, error) {
 			return []entity.Category{
 				{ID: 1, Name: "Fiqih"},
@@ -60,7 +60,7 @@ func TestCategoryFindAll_Success(t *testing.T) {
 }
 
 func TestCategoryFindByID_Success(t *testing.T) {
-	repo := &mocks.MockCategoryRepository{
+	repo := &categorymock.MockCategoryRepository{
 		FindByIDFn: func(id uint) (*entity.Category, error) {
 			return &entity.Category{ID: id, Name: "Fiqih"}, nil
 		},
@@ -74,7 +74,7 @@ func TestCategoryFindByID_Success(t *testing.T) {
 }
 
 func TestCategoryFindByID_NotFound(t *testing.T) {
-	repo := &mocks.MockCategoryRepository{
+	repo := &categorymock.MockCategoryRepository{
 		FindByIDFn: func(id uint) (*entity.Category, error) {
 			return nil, errors.New("not found")
 		},
@@ -88,7 +88,7 @@ func TestCategoryFindByID_NotFound(t *testing.T) {
 }
 
 func TestCategoryUpdate_Success(t *testing.T) {
-	repo := &mocks.MockCategoryRepository{
+	repo := &categorymock.MockCategoryRepository{
 		UpdateFn: func(id uint, updates map[string]interface{}) error { return nil },
 		FindByIDFn: func(id uint) (*entity.Category, error) {
 			return &entity.Category{ID: id, Name: "Updated"}, nil
@@ -103,7 +103,7 @@ func TestCategoryUpdate_Success(t *testing.T) {
 }
 
 func TestCategoryUpdate_NoChanges(t *testing.T) {
-	repo := &mocks.MockCategoryRepository{} 
+	repo := &categorymock.MockCategoryRepository{} 
 
 	svc := service.NewCategoryService(repo)
 	cat, err := svc.Update(1, request.UpdateCategoryRequest{}, nil)
@@ -114,7 +114,7 @@ func TestCategoryUpdate_NoChanges(t *testing.T) {
 }
 
 func TestCategoryDelete_Success(t *testing.T) {
-	repo := &mocks.MockCategoryRepository{
+	repo := &categorymock.MockCategoryRepository{
 		DeleteFn: func(id uint) error { return nil },
 	}
 
@@ -125,7 +125,7 @@ func TestCategoryDelete_Success(t *testing.T) {
 }
 
 func TestCategorySearch_Success(t *testing.T) {
-	repo := &mocks.MockCategoryRepository{
+	repo := &categorymock.MockCategoryRepository{
 		SearchFn: func(query string) ([]entity.Category, error) {
 			return []entity.Category{{ID: 1, Name: "Fiqih"}}, nil
 		},

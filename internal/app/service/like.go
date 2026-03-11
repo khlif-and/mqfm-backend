@@ -10,11 +10,13 @@ import (
 )
 
 type likeService struct {
-	repo port.LikeRepository
+	repo        port.LikeRepository
+	downloadSvc port.DownloadService
+	prefRepo    port.UserPreferenceRepository
 }
 
-func NewLikeService(repo port.LikeRepository) port.LikeService {
-	return &likeService{repo: repo}
+func NewLikeService(repo port.LikeRepository, downloadSvc port.DownloadService, prefRepo port.UserPreferenceRepository) port.LikeService {
+	return &likeService{repo: repo, downloadSvc: downloadSvc, prefRepo: prefRepo}
 }
 
 func (s *likeService) Like(userID uint, req request.LikeRequest) (*entity.Like, error) {
@@ -36,7 +38,19 @@ func (s *likeService) Like(userID uint, req request.LikeRequest) (*entity.Like, 
 		return nil, err
 	}
 
+	if req.TargetType == "audio" {
+		go s.triggerAutoDownload(userID, req.TargetID)
+	}
+
 	return &like, nil
+}
+
+func (s *likeService) triggerAutoDownload(userID, audioID uint) {
+	pref, err := s.prefRepo.FindByUser(userID)
+	if err != nil || !pref.AutoDownloadOnLike {
+		return
+	}
+	_, _ = s.downloadSvc.RecordDownload(userID, request.DownloadRequest{AudioID: audioID})
 }
 
 func (s *likeService) Unlike(userID uint, req request.UnlikeRequest) error {

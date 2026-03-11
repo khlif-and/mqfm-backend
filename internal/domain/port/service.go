@@ -127,6 +127,7 @@ type DownloadService interface {
 	DeleteDownload(id, userID uint) error
 	GetStorageUsage(userID uint) (int64, error)
 	GetNewFromFavorites(userID uint) ([]entity.Audio, error)
+	CleanupExpired() (int64, error)
 }
 
 type ListeningStatService interface {

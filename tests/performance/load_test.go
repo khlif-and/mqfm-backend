@@ -15,19 +15,21 @@ import (
 	"mqfm-backend/internal/domain/entity"
 	"mqfm-backend/internal/infrastructure/middleware"
 	"mqfm-backend/internal/shared/dto/request"
-	"mqfm-backend/tests/mocks"
+	audiomock "mqfm-backend/tests/mocks/audio"
+	authmock "mqfm-backend/tests/mocks/auth"
+	historymock "mqfm-backend/tests/mocks/history"
 	"mqfm-backend/tests/testutil"
 )
 
 func setupPerfRouter() *gin.Engine {
 	r := testutil.SetupRouter()
-	audioSvc := &mocks.MockAudioService{
+	audioSvc := &audiomock.MockAudioService{
 		FindAllFn:  func() ([]entity.Audio, error) { return []entity.Audio{{ID: 1, Title: "A1", Status: "active", CreatedAt: time.Now(), UpdatedAt: time.Now()}, {ID: 2, Title: "A2", Status: "active", CreatedAt: time.Now(), UpdatedAt: time.Now()}}, nil },
 		FindByIDFn: func(id uint) (*entity.Audio, error) { return &entity.Audio{ID: id, Title: "Audio", Artist: "A", CreatedAt: time.Now(), UpdatedAt: time.Now()}, nil },
 		SearchFn:   func(q string) ([]entity.Audio, error) { return []entity.Audio{{ID: 1, Title: q, CreatedAt: time.Now(), UpdatedAt: time.Now()}}, nil },
 	}
-	historySvc := &mocks.MockHistoryService{RecordPlayFn: func(u uint, r request.HistoryRequest) error { return nil }}
-	adminSvc := &mocks.MockAdminAuthService{
+	historySvc := &historymock.MockHistoryService{RecordPlayFn: func(u uint, r request.HistoryRequest) error { return nil }}
+	adminSvc := &authmock.MockAdminAuthService{
 		LoginFn:   func(r request.AdminLoginRequest) (string, *entity.Admin, error) { return "token", &entity.Admin{ID: 1, Email: r.Email, Role: "admin", CreatedAt: time.Now(), UpdatedAt: time.Now()}, nil },
 		GetByIDFn: func(id uint) (*entity.Admin, error) { return &entity.Admin{ID: id, Username: "admin", CreatedAt: time.Now(), UpdatedAt: time.Now()}, nil },
 	}
