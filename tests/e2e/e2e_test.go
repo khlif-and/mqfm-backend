@@ -15,7 +15,10 @@ admin "mqfm-backend/internal/adapter/handler/admin"
 "mqfm-backend/internal/domain/entity"
 "mqfm-backend/internal/infrastructure/middleware"
 "mqfm-backend/internal/shared/dto/request"
-"mqfm-backend/tests/mocks"
+audiomock "mqfm-backend/tests/mocks/audio"
+authmock "mqfm-backend/tests/mocks/auth"
+categorymock "mqfm-backend/tests/mocks/category"
+historymock "mqfm-backend/tests/mocks/history"
 "mqfm-backend/tests/testutil"
 )
 
@@ -29,7 +32,7 @@ nextAudID  uint
 func setupE2ERouter() (*gin.Engine, *e2eState) {
 st := &e2eState{categories: make(map[uint]*entity.Category), audios: make(map[uint]*entity.Audio), nextCatID: 1, nextAudID: 1}
 
-adminSvc := &mocks.MockAdminAuthService{
+adminSvc := &authmock.MockAdminAuthService{
 RegisterFn: func(req request.AdminRegisterRequest) (*entity.Admin, error) {
 return &entity.Admin{ID: 1, Username: req.Username, Email: req.Email, Role: "admin", CreatedAt: time.Now(), UpdatedAt: time.Now()}, nil
 },
@@ -40,7 +43,7 @@ GetByIDFn: func(id uint) (*entity.Admin, error) {
 return &entity.Admin{ID: id, Username: "admin", Email: "admin@test.com", Role: "admin", CreatedAt: time.Now(), UpdatedAt: time.Now()}, nil
 },
 }
-catSvc := &mocks.MockCategoryService{
+catSvc := &categorymock.MockCategoryService{
 CreateFn: func(req request.CreateCategoryRequest, f *multipart.FileHeader) (*entity.Category, error) {
 c := &entity.Category{ID: st.nextCatID, Name: req.Name, CreatedAt: time.Now(), UpdatedAt: time.Now()}
 st.categories[st.nextCatID] = c
@@ -67,13 +70,13 @@ for _, c := range st.categories { if strings.Contains(c.Name, q) { r = append(r,
 return r, nil
 },
 }
-audioSvc := &mocks.MockAudioService{
+audioSvc := &audiomock.MockAudioService{
 FindAllFn:  func() ([]entity.Audio, error) { return nil, nil },
 FindByIDFn: func(id uint) (*entity.Audio, error) { a, ok := st.audios[id]; if !ok { return nil, errors.New("not found") }; return a, nil },
 DeleteFn:   func(id uint) error { delete(st.audios, id); return nil },
 SearchFn:   func(q string) ([]entity.Audio, error) { return nil, nil },
 }
-historySvc := &mocks.MockHistoryService{RecordPlayFn: func(u uint, r request.HistoryRequest) error { return nil }}
+historySvc := &historymock.MockHistoryService{RecordPlayFn: func(u uint, r request.HistoryRequest) error { return nil }}
 
 r := testutil.SetupRouter()
 r.Use(middleware.Security())

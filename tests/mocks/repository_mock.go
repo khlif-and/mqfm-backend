@@ -133,6 +133,9 @@ func (m *MockLikeRepository) CountByTarget(targetType string, targetID uint) (in
 	return m.CountByTargetFn(targetType, targetID)
 }
 func (m *MockLikeRepository) AggregateLikeCounts() (map[uint]int64, error) { return m.AggregateFn() }
+func (m *MockLikeRepository) AggregateWeeklyLikeCounts(since time.Time) (map[uint]int64, error) {
+	return map[uint]int64{}, nil
+}
 
 type MockHistoryRepository struct {
 	UpsertFn            func(history *entity.History) error
@@ -287,6 +290,10 @@ func (m *MockAudioScoreRepository) DeleteAll() error { return m.DeleteAllFn() }
 func (m *MockAudioScoreRepository) BulkUpsert(scores []entity.AudioScore) error {
 	return m.BulkUpsertFn(scores)
 }
+func (m *MockAudioScoreRepository) FindTopByWeeklyLikes(limit int) ([]entity.AudioScore, error) {
+	return []entity.AudioScore{}, nil
+}
+func (m *MockAudioScoreRepository) BulkUpdateWeeklyLikes(data map[uint]int64) error { return nil }
 
 type MockNotificationRepository struct {
 	CreateFn             func(notification *entity.Notification) error
@@ -461,3 +468,29 @@ var _ port.UserLocationRepository = (*MockUserLocationRepository)(nil)
 var _ port.EventRepository = (*MockEventRepository)(nil)
 var _ port.AudioVoteRepository = (*MockAudioVoteRepository)(nil)
 var _ port.AudioRankingRepository = (*MockAudioRankingRepository)(nil)
+
+type MockDownloadRepository struct {
+	CreateFn        func(download *entity.Download) error
+	FindByUserFn    func(userID uint) ([]entity.Download, error)
+	DeleteFn        func(id, userID uint) error
+	ExistsFn        func(userID, audioID uint) (bool, error)
+	SumSizeByUserFn func(userID uint) (int64, error)
+	DeleteExpiredFn func() (int64, error)
+}
+
+func (m *MockDownloadRepository) Create(download *entity.Download) error {
+	return m.CreateFn(download)
+}
+func (m *MockDownloadRepository) FindByUser(userID uint) ([]entity.Download, error) {
+	return m.FindByUserFn(userID)
+}
+func (m *MockDownloadRepository) Delete(id, userID uint) error { return m.DeleteFn(id, userID) }
+func (m *MockDownloadRepository) Exists(userID, audioID uint) (bool, error) {
+	return m.ExistsFn(userID, audioID)
+}
+func (m *MockDownloadRepository) SumSizeByUser(userID uint) (int64, error) {
+	return m.SumSizeByUserFn(userID)
+}
+func (m *MockDownloadRepository) DeleteExpired() (int64, error) { return m.DeleteExpiredFn() }
+
+var _ port.DownloadRepository = (*MockDownloadRepository)(nil)

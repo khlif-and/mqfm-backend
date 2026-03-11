@@ -13,11 +13,11 @@ import (
 	"mqfm-backend/internal/domain/entity"
 	"mqfm-backend/internal/infrastructure/middleware"
 	"mqfm-backend/internal/shared/dto/request"
-	"mqfm-backend/tests/mocks"
+	authmock "mqfm-backend/tests/mocks/auth"
 	"mqfm-backend/tests/testutil"
 )
 
-func setupAdminAuthRouter(service *mocks.MockAdminAuthService) *gin.Engine {
+func setupAdminAuthRouter(service *authmock.MockAdminAuthService) *gin.Engine {
 	r := testutil.SetupRouter()
 	handler := admin.NewAuthHandler(service)
 
@@ -30,7 +30,7 @@ func setupAdminAuthRouter(service *mocks.MockAdminAuthService) *gin.Engine {
 }
 
 func TestAdminAuthHandler_Register_Success(t *testing.T) {
-	service := &mocks.MockAdminAuthService{
+	service := &authmock.MockAdminAuthService{
 		RegisterFn: func(req request.AdminRegisterRequest) (*entity.Admin, error) {
 			return &entity.Admin{
 				ID: 1, Username: req.Username, Email: req.Email,
@@ -51,7 +51,7 @@ func TestAdminAuthHandler_Register_Success(t *testing.T) {
 }
 
 func TestAdminAuthHandler_Register_InvalidInput(t *testing.T) {
-	service := &mocks.MockAdminAuthService{}
+	service := &authmock.MockAdminAuthService{}
 	r := setupAdminAuthRouter(service)
 
 	req := testutil.MakeRequest("POST", "/admin/register", map[string]string{
@@ -63,7 +63,7 @@ func TestAdminAuthHandler_Register_InvalidInput(t *testing.T) {
 }
 
 func TestAdminAuthHandler_Login_Success(t *testing.T) {
-	service := &mocks.MockAdminAuthService{
+	service := &authmock.MockAdminAuthService{
 		LoginFn: func(req request.AdminLoginRequest) (string, *entity.Admin, error) {
 			return "test-token", &entity.Admin{
 				ID: 1, Username: "admin1", Email: req.Email,
@@ -85,7 +85,7 @@ func TestAdminAuthHandler_Login_Success(t *testing.T) {
 }
 
 func TestAdminAuthHandler_Login_Fail(t *testing.T) {
-	service := &mocks.MockAdminAuthService{
+	service := &authmock.MockAdminAuthService{
 		LoginFn: func(req request.AdminLoginRequest) (string, *entity.Admin, error) {
 			return "", nil, errors.New("invalid credentials")
 		},
@@ -101,7 +101,7 @@ func TestAdminAuthHandler_Login_Fail(t *testing.T) {
 }
 
 func TestAdminAuthHandler_Me_Success(t *testing.T) {
-	service := &mocks.MockAdminAuthService{
+	service := &authmock.MockAdminAuthService{
 		GetByIDFn: func(id uint) (*entity.Admin, error) {
 			return &entity.Admin{
 				ID: id, Username: "admin1", Email: "admin@test.com",
@@ -121,7 +121,7 @@ func TestAdminAuthHandler_Me_Success(t *testing.T) {
 }
 
 func TestAdminAuthHandler_Me_Unauthorized(t *testing.T) {
-	service := &mocks.MockAdminAuthService{}
+	service := &authmock.MockAdminAuthService{}
 	r := setupAdminAuthRouter(service)
 
 	req := testutil.MakeRequest("GET", "/admin/me", nil)
@@ -131,7 +131,7 @@ func TestAdminAuthHandler_Me_Unauthorized(t *testing.T) {
 }
 
 func TestAdminAuthHandler_Logout(t *testing.T) {
-	service := &mocks.MockAdminAuthService{}
+	service := &authmock.MockAdminAuthService{}
 	r := setupAdminAuthRouter(service)
 
 	req := testutil.MakeAuthRequest("POST", "/admin/logout", nil, 1, "admin")
@@ -141,7 +141,7 @@ func TestAdminAuthHandler_Logout(t *testing.T) {
 }
 
 func TestAdminAuthHandler_Update_Success(t *testing.T) {
-	service := &mocks.MockAdminAuthService{
+	service := &authmock.MockAdminAuthService{
 		UpdateFn: func(id uint, updates map[string]interface{}) (*entity.Admin, error) {
 			return &entity.Admin{
 				ID: id, Username: "updated", Email: "admin@test.com",
@@ -160,7 +160,7 @@ func TestAdminAuthHandler_Update_Success(t *testing.T) {
 }
 
 func TestAdminAuthHandler_Update_InvalidID(t *testing.T) {
-	service := &mocks.MockAdminAuthService{}
+	service := &authmock.MockAdminAuthService{}
 	r := setupAdminAuthRouter(service)
 
 	req := testutil.MakeAuthRequest("PUT", "/admin/abc", map[string]interface{}{

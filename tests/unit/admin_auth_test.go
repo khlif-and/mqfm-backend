@@ -12,7 +12,7 @@ import (
 	"mqfm-backend/internal/domain/entity"
 	"mqfm-backend/internal/shared/dto/request"
 	"mqfm-backend/internal/shared/security"
-	"mqfm-backend/tests/mocks"
+	authmock "mqfm-backend/tests/mocks/auth"
 )
 
 type stubTokenStore struct{}
@@ -29,7 +29,7 @@ func (s *stubTokenStore) RefreshToken(_ context.Context, _ uint, _ string) (stri
 }
 
 func TestAdminRegister_Success(t *testing.T) {
-	repo := &mocks.MockAdminRepository{
+	repo := &authmock.MockAdminRepository{
 		CreateFn: func(admin *entity.Admin) error { admin.ID = 1; return nil },
 	}
 	svc := service.NewAdminAuthService(repo, &stubTokenStore{})
@@ -43,7 +43,7 @@ func TestAdminRegister_Success(t *testing.T) {
 }
 
 func TestAdminRegister_DuplicateEmail(t *testing.T) {
-	repo := &mocks.MockAdminRepository{
+	repo := &authmock.MockAdminRepository{
 		CreateFn: func(admin *entity.Admin) error { return errors.New("duplicate entry") },
 	}
 	svc := service.NewAdminAuthService(repo, &stubTokenStore{})
@@ -54,7 +54,7 @@ func TestAdminRegister_DuplicateEmail(t *testing.T) {
 
 func TestAdminLogin_Success(t *testing.T) {
 	hashed, _ := security.HashPassword("password123")
-	repo := &mocks.MockAdminRepository{
+	repo := &authmock.MockAdminRepository{
 		FindByEmailFn: func(email string) (*entity.Admin, error) {
 			return &entity.Admin{ID: 1, Username: "admin1", Email: email, Password: hashed, Role: "admin"}, nil
 		},
@@ -68,7 +68,7 @@ func TestAdminLogin_Success(t *testing.T) {
 
 func TestAdminLogin_WrongPassword(t *testing.T) {
 	hashed, _ := security.HashPassword("password123")
-	repo := &mocks.MockAdminRepository{
+	repo := &authmock.MockAdminRepository{
 		FindByEmailFn: func(email string) (*entity.Admin, error) {
 			return &entity.Admin{ID: 1, Password: hashed}, nil
 		},
@@ -81,7 +81,7 @@ func TestAdminLogin_WrongPassword(t *testing.T) {
 }
 
 func TestAdminLogin_UserNotFound(t *testing.T) {
-	repo := &mocks.MockAdminRepository{
+	repo := &authmock.MockAdminRepository{
 		FindByEmailFn: func(email string) (*entity.Admin, error) { return nil, errors.New("not found") },
 	}
 	svc := service.NewAdminAuthService(repo, &stubTokenStore{})
@@ -92,7 +92,7 @@ func TestAdminLogin_UserNotFound(t *testing.T) {
 }
 
 func TestAdminUpdateAdmin_Success(t *testing.T) {
-	repo := &mocks.MockAdminRepository{
+	repo := &authmock.MockAdminRepository{
 		UpdateFn:   func(id uint, updates map[string]interface{}) error { return nil },
 		FindByIDFn: func(id uint) (*entity.Admin, error) { return &entity.Admin{ID: id, Username: "updated", Email: "admin@test.com"}, nil },
 	}
@@ -104,7 +104,7 @@ func TestAdminUpdateAdmin_Success(t *testing.T) {
 
 func TestAdminUpdateAdmin_WithPassword(t *testing.T) {
 	var savedUpdates map[string]interface{}
-	repo := &mocks.MockAdminRepository{
+	repo := &authmock.MockAdminRepository{
 		UpdateFn:   func(id uint, updates map[string]interface{}) error { savedUpdates = updates; return nil },
 		FindByIDFn: func(id uint) (*entity.Admin, error) { return &entity.Admin{ID: id}, nil },
 	}
@@ -117,7 +117,7 @@ func TestAdminUpdateAdmin_WithPassword(t *testing.T) {
 }
 
 func TestAdminGetByID_Success(t *testing.T) {
-	repo := &mocks.MockAdminRepository{
+	repo := &authmock.MockAdminRepository{
 		FindByIDFn: func(id uint) (*entity.Admin, error) { return &entity.Admin{ID: id, Username: "admin1"}, nil },
 	}
 	svc := service.NewAdminAuthService(repo, &stubTokenStore{})
@@ -127,7 +127,7 @@ func TestAdminGetByID_Success(t *testing.T) {
 }
 
 func TestAdminGetByID_NotFound(t *testing.T) {
-	repo := &mocks.MockAdminRepository{
+	repo := &authmock.MockAdminRepository{
 		FindByIDFn: func(id uint) (*entity.Admin, error) { return nil, errors.New("not found") },
 	}
 	svc := service.NewAdminAuthService(repo, &stubTokenStore{})

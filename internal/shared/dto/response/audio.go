@@ -9,6 +9,8 @@ type AudioResponse struct {
 	Description   string    `json:"description,omitempty"`
 	FilePath      string    `json:"file_path"`
 	Duration      int       `json:"duration"`
+	DurationFmt   string    `json:"duration_fmt"`
+	FileSize      int64     `json:"file_size"`
 	Status        string    `json:"status"`
 	CategoryID    uint      `json:"category_id"`
 	Thumbnail     string    `json:"thumbnail,omitempty"`

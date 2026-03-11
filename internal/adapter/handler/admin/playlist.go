@@ -229,6 +229,8 @@ func (h *PlaylistHandler) toResponse(p *entity.Playlist) response.PlaylistRespon
 			Artist:        a.Artist,
 			FilePath:      a.FilePath,
 			Duration:      a.Duration,
+			DurationFmt:   response.FormatDuration(a.Duration),
+			FileSize:      a.FileSize,
 			Status:        a.Status,
 			CategoryID:    a.CategoryID,
 			Thumbnail:     a.Thumbnail,

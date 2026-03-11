@@ -8,11 +8,11 @@ import (
 	"mqfm-backend/internal/app/service"
 	"mqfm-backend/internal/domain/entity"
 	"mqfm-backend/internal/shared/dto/request"
-	"mqfm-backend/tests/mocks"
+	historymock "mqfm-backend/tests/mocks/history"
 )
 
 func TestRecordPlay_Success(t *testing.T) {
-	repo := &mocks.MockHistoryRepository{
+	repo := &historymock.MockHistoryRepository{
 		UpsertFn: func(history *entity.History) error { return nil },
 	}
 
@@ -23,7 +23,7 @@ func TestRecordPlay_Success(t *testing.T) {
 }
 
 func TestGetHistory_Success(t *testing.T) {
-	repo := &mocks.MockHistoryRepository{
+	repo := &historymock.MockHistoryRepository{
 		FindByUserFn: func(userID uint) ([]entity.History, error) {
 			return []entity.History{
 				{ID: 1, UserID: userID, AudioID: 10, PlayCount: 5},
@@ -41,7 +41,7 @@ func TestGetHistory_Success(t *testing.T) {
 }
 
 func TestDeleteHistory_Success(t *testing.T) {
-	repo := &mocks.MockHistoryRepository{
+	repo := &historymock.MockHistoryRepository{
 		DeleteByUserAudioFn: func(userID, audioID uint) error { return nil },
 	}
 
@@ -52,7 +52,7 @@ func TestDeleteHistory_Success(t *testing.T) {
 }
 
 func TestClearHistory_Success(t *testing.T) {
-	repo := &mocks.MockHistoryRepository{
+	repo := &historymock.MockHistoryRepository{
 		DeleteAllFn: func(userID uint) error { return nil },
 	}
 

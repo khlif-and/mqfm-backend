@@ -24,6 +24,10 @@ func NewPlaylistService(repo port.PlaylistRepository, colorSvc port.ColorExtract
 }
 
 func (s *playlistService) Create(playlist *entity.Playlist, file interface{}) error {
+	if playlist.ShareToken == "" {
+		playlist.ShareToken = uuid.New().String()
+	}
+
 	if playlist.ImageURL != "" {
 		if color, err := s.colorSvc.ExtractDominantColor(playlist.ImageURL); err == nil {
 			playlist.DominantColor = color
@@ -105,7 +109,13 @@ func (s *playlistService) AddAudioToPlaylist(playlistID, audioID uint) error {
 		return err
 	}
 
-	if playlist.DominantColor == "" && audio.Thumbnail != "" {
+	if playlist.ImageURL == "" && audio.Thumbnail != "" {
+		updates := map[string]interface{}{"image_url": audio.Thumbnail}
+		if color, err := s.colorSvc.ExtractDominantColor(audio.Thumbnail); err == nil {
+			updates["dominant_color"] = color
+		}
+		_ = s.repo.Update(playlistID, updates)
+	} else if playlist.DominantColor == "" && audio.Thumbnail != "" {
 		if color, err := s.colorSvc.ExtractDominantColor(audio.Thumbnail); err == nil {
 			_ = s.repo.Update(playlistID, map[string]interface{}{
 				"dominant_color": color,

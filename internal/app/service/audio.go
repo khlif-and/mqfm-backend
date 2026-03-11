@@ -57,6 +57,11 @@ func (s *audioService) Create(req request.CreateAudioRequest, audioFile *multipa
 		DominantColor: dominantColor,
 	}
 
+	if filePath != "" {
+		audio.Duration = helper.ExtractAudioDuration(filePath)
+		audio.FileSize = helper.GetFileSize(filePath)
+	}
+
 	if err := s.repo.Create(&audio); err != nil {
 		return nil, err
 	}
@@ -97,6 +102,8 @@ func (s *audioService) Update(id uint, req request.UpdateAudioRequest, audioFile
 			logger.Error("failed to save audio file")
 		} else {
 			updates["file_path"] = path
+			updates["duration"] = helper.ExtractAudioDuration(path)
+			updates["file_size"] = helper.GetFileSize(path)
 		}
 	}
 

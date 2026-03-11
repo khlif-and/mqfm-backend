@@ -1,7 +1,8 @@
 package request
 
 type UpdatePreferenceRequest struct {
-	PlaybackSpeed     *float64 `json:"playback_speed"`
-	SleepTimerMinutes *int     `json:"sleep_timer_minutes"`
-	AutoDownloadWifi  *bool    `json:"auto_download_wifi"`
+	PlaybackSpeed      *float64 `json:"playback_speed"`
+	SleepTimerMinutes  *int     `json:"sleep_timer_minutes"`
+	AutoDownloadWifi   *bool    `json:"auto_download_wifi"`
+	AutoDownloadOnLike *bool    `json:"auto_download_on_like"`
 }

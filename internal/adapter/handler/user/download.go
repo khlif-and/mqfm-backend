@@ -2,9 +2,11 @@ package user
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
+	"mqfm-backend/internal/domain/entity"
 	"mqfm-backend/internal/domain/port"
 	"mqfm-backend/internal/shared/constant"
 	"mqfm-backend/internal/shared/dto/request"
@@ -41,13 +43,7 @@ func (h *DownloadHandler) Record(c *gin.Context) {
 		return
 	}
 
-	resp.Success(c, http.StatusCreated, constant.MsgDownloadOK, response.DownloadResponse{
-		ID:        dl.ID,
-		UserID:    dl.UserID,
-		AudioID:   dl.AudioID,
-		FileSize:  dl.FileSize,
-		CreatedAt: dl.CreatedAt,
-	})
+	resp.Success(c, http.StatusCreated, constant.MsgDownloadOK, toDownloadResponse(dl))
 }
 
 func (h *DownloadHandler) GetAll(c *gin.Context) {
@@ -63,15 +59,9 @@ func (h *DownloadHandler) GetAll(c *gin.Context) {
 		return
 	}
 
-	var result []response.DownloadResponse
-	for _, d := range downloads {
-		result = append(result, response.DownloadResponse{
-			ID:        d.ID,
-			UserID:    d.UserID,
-			AudioID:   d.AudioID,
-			FileSize:  d.FileSize,
-			CreatedAt: d.CreatedAt,
-		})
+	result := make([]response.DownloadResponse, 0, len(downloads))
+	for i := range downloads {
+		result = append(result, toDownloadResponse(&downloads[i]))
 	}
 
 	resp.Success(c, http.StatusOK, constant.MsgDownloadListOK, result)
@@ -136,4 +126,34 @@ func (h *DownloadHandler) SmartDownload(c *gin.Context) {
 	}
 
 	resp.Success(c, http.StatusOK, constant.MsgDownloadSmartOK, result)
+}
+
+func toDownloadResponse(d *entity.Download) response.DownloadResponse {
+	r := response.DownloadResponse{
+		ID:         d.ID,
+		UserID:     d.UserID,
+		AudioID:    d.AudioID,
+		PlaylistID: d.PlaylistID,
+		FileSize:   d.FileSize,
+		ExpiresAt:  d.ExpiresAt,
+		CreatedAt:  d.CreatedAt,
+	}
+	if !d.ExpiresAt.IsZero() {
+		remaining := int(time.Until(d.ExpiresAt).Hours() / 24)
+		if remaining < 0 {
+			remaining = 0
+		}
+		r.DaysRemaining = remaining
+	}
+	if d.Audio != nil {
+		r.Title = d.Audio.Title
+		r.Artist = d.Audio.Artist
+		r.Thumbnail = d.Audio.Thumbnail
+		r.DominantColor = d.Audio.DominantColor
+		r.Duration = d.Audio.Duration
+		r.DurationFmt = response.FormatDuration(d.Audio.Duration)
+		ar := toAudioResponseVal(*d.Audio)
+		r.Audio = &ar
+	}
+	return r
 }

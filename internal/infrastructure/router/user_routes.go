@@ -30,6 +30,7 @@ func registerUserRoutes(api *gin.RouterGroup, h *Handlers) {
 				playlists.GET("/search", h.UserPlaylist.Search)
 				playlists.GET("/:id", h.UserPlaylist.GetDetail)
 				playlists.POST("/", h.UserPlaylist.Create)
+				playlists.POST("/from-audio", h.UserPlaylist.CreateFromAudio)
 				playlists.PUT("/:id", h.UserPlaylist.Update)
 				playlists.DELETE("/:id", h.UserPlaylist.Delete)
 				playlists.POST("/add-audio", h.UserPlaylist.AddAudio)

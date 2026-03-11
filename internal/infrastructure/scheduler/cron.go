@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"context"
+	"math/rand"
 	"time"
 
 	"go.uber.org/zap"
@@ -186,4 +187,102 @@ func (n *NotificationScheduler) Start() {
 			}
 		}
 	}()
+}
+
+type DownloadCleanupScheduler struct {
+	downloadSvc port.DownloadService
+}
+
+func NewDownloadCleanupScheduler(svc port.DownloadService) *DownloadCleanupScheduler {
+	return &DownloadCleanupScheduler{downloadSvc: svc}
+}
+
+func (d *DownloadCleanupScheduler) Start() {
+	go func() {
+		logger.Info("scheduler started: daily download cleanup at 04:00")
+		for {
+			now := time.Now()
+			next := time.Date(now.Year(), now.Month(), now.Day(), 4, 0, 0, 0, now.Location())
+			if now.After(next) {
+				next = next.Add(24 * time.Hour)
+			}
+			time.Sleep(time.Until(next))
+
+			logger.Info("scheduler: cleaning up expired downloads")
+			if count, err := d.downloadSvc.CleanupExpired(); err != nil {
+				logger.Error("scheduler: download cleanup failed", zap.Error(err))
+			} else {
+				logger.Info("scheduler: download cleanup completed", zap.Int64("removed", count))
+			}
+		}
+	}()
+}
+
+// WeeklyLikeScheduler refreshes weekly_likes every Monday with real likes +
+// a deterministic robot boost (seeded by week number + audio_id) so the ranking
+// rotates each week without being fully random.
+type WeeklyLikeScheduler struct {
+	scoreRepo port.AudioScoreRepository
+	likeRepo  port.LikeRepository
+}
+
+func NewWeeklyLikeScheduler(sr port.AudioScoreRepository, lr port.LikeRepository) *WeeklyLikeScheduler {
+	return &WeeklyLikeScheduler{scoreRepo: sr, likeRepo: lr}
+}
+
+func (w *WeeklyLikeScheduler) Start() {
+	go func() {
+		logger.Info("scheduler started: weekly like ranking refresh")
+		// Run immediately so ranking is populated on startup.
+		w.refresh()
+		for {
+			now := time.Now()
+			// Next Monday 00:01
+			daysUntilMonday := (int(time.Monday) - int(now.Weekday()) + 7) % 7
+			if daysUntilMonday == 0 {
+				daysUntilMonday = 7
+			}
+			next := time.Date(now.Year(), now.Month(), now.Day()+daysUntilMonday, 0, 1, 0, 0, now.Location())
+			time.Sleep(time.Until(next))
+			w.refresh()
+		}
+	}()
+}
+
+func (w *WeeklyLikeScheduler) refresh() {
+	logger.Info("scheduler: refreshing weekly likes ranking")
+	start := time.Now()
+
+	since := time.Now().AddDate(0, 0, -7)
+	realLikes, err := w.likeRepo.AggregateWeeklyLikeCounts(since)
+	if err != nil {
+		logger.Error("weekly scheduler: failed to aggregate weekly likes", zap.Error(err))
+		return
+	}
+
+	allScores, err := w.scoreRepo.FindTopByScore(1000)
+	if err != nil {
+		logger.Error("weekly scheduler: failed to fetch audio scores", zap.Error(err))
+		return
+	}
+
+	_, weekNum := time.Now().ISOWeek()
+	weeklyData := make(map[uint]int64, len(allScores))
+	for _, s := range allScores {
+		realCount := realLikes[s.AudioID]
+		// Deterministic boost per (week, audio): same within a week, differs each week.
+		r := rand.New(rand.NewSource(int64(weekNum)*100000 + int64(s.AudioID)))
+		boost := r.Int63n(10) // 0-9 robot likes
+		weeklyData[s.AudioID] = realCount + boost
+	}
+
+	if err := w.scoreRepo.BulkUpdateWeeklyLikes(weeklyData); err != nil {
+		logger.Error("weekly scheduler: failed to update weekly likes", zap.Error(err))
+		return
+	}
+
+	logger.Info("weekly scheduler: weekly likes updated",
+		zap.Int("audios", len(weeklyData)),
+		zap.Duration("elapsed", time.Since(start)),
+	)
 }

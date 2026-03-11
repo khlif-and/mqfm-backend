@@ -1,6 +1,9 @@
 package router
 
 import (
+	"time"
+
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
 	adminHandler "mqfm-backend/internal/adapter/handler/admin"
@@ -38,6 +41,14 @@ type Handlers struct {
 }
 
 func Setup(r *gin.Engine, h *Handlers) {
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: false,
+		MaxAge:           12 * time.Hour,
+	}))
 	r.Use(middleware.Security())
 	r.Use(middleware.RequestLogger())
 	r.Use(middleware.RateLimit(100, 200))
@@ -45,8 +56,12 @@ func Setup(r *gin.Engine, h *Handlers) {
 	r.Static("/uploads", "./uploads")
 
 	api := r.Group("/api")
-
 	registerPublicRoutes(api, h)
 	registerAdminRoutes(api, h)
 	registerUserRoutes(api, h)
+
+	apiv1 := r.Group("/api/v1")
+	registerPublicRoutes(apiv1, h)
+	registerAdminRoutes(apiv1, h)
+	registerUserRoutes(apiv1, h)
 }

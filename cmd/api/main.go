@@ -33,10 +33,16 @@ func main() {
 	notifScheduler := scheduler.NewNotificationScheduler(container.NotificationService)
 	notifScheduler.Start()
 
+	dlCleanupScheduler := scheduler.NewDownloadCleanupScheduler(container.DownloadService)
+	dlCleanupScheduler.Start()
+
 	if container.RankingCache != nil {
 		rankingScheduler := scheduler.NewRankingScheduler(container.RankingCache)
 		rankingScheduler.Start()
 	}
+
+	weeklyScheduler := scheduler.NewWeeklyLikeScheduler(container.AudioScoreRepo, container.LikeRepo)
+	weeklyScheduler.Start()
 
 	r := gin.New()
 	r.Use(gin.Recovery())

@@ -1,6 +1,8 @@
 package mysql
 
 import (
+	"time"
+
 	"gorm.io/gorm"
 
 	"mqfm-backend/internal/domain/entity"
@@ -21,7 +23,8 @@ func (r *downloadRepo) Create(download *entity.Download) error {
 
 func (r *downloadRepo) FindByUser(userID uint) ([]entity.Download, error) {
 	var downloads []entity.Download
-	err := r.db.Where("user_id = ?", userID).Preload("Audio").Order("created_at DESC").Find(&downloads).Error
+	err := r.db.Where("user_id = ? AND expires_at > ?", userID, time.Now()).
+		Preload("Audio").Order("created_at DESC").Find(&downloads).Error
 	return downloads, err
 }
 
@@ -31,13 +34,18 @@ func (r *downloadRepo) Delete(id, userID uint) error {
 
 func (r *downloadRepo) Exists(userID, audioID uint) (bool, error) {
 	var count int64
-	err := r.db.Model(&entity.Download{}).Where("user_id = ? AND audio_id = ?", userID, audioID).Count(&count).Error
+	err := r.db.Model(&entity.Download{}).Where("user_id = ? AND audio_id = ? AND expires_at > ?", userID, audioID, time.Now()).Count(&count).Error
 	return count > 0, err
 }
 
 func (r *downloadRepo) SumSizeByUser(userID uint) (int64, error) {
 	var total int64
-	err := r.db.Model(&entity.Download{}).Where("user_id = ?", userID).
+	err := r.db.Model(&entity.Download{}).Where("user_id = ? AND expires_at > ?", userID, time.Now()).
 		Select("COALESCE(SUM(file_size), 0)").Scan(&total).Error
 	return total, err
+}
+
+func (r *downloadRepo) DeleteExpired() (int64, error) {
+	result := r.db.Where("expires_at <= ?", time.Now()).Delete(&entity.Download{})
+	return result.RowsAffected, result.Error
 }

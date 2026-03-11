@@ -21,10 +21,13 @@ type Container struct {
 	RecommendationService port.RecommendationService
 	AudioVoteService      port.AudioVoteService
 	NotificationService   port.NotificationService
+	DownloadService       port.DownloadService
 	Cache                 port.CacheRepository
 	CacheManager          port.CacheManager
 	TokenStore            port.TokenStore
 	RankingCache          *cache.RankingCache
+	AudioScoreRepo        port.AudioScoreRepository
+	LikeRepo              port.LikeRepository
 }
 
 func NewContainer(db *gorm.DB, redisClient *redis.Client, cfg *config.Config) *Container {
@@ -73,7 +76,8 @@ func NewContainer(db *gorm.DB, redisClient *redis.Client, cfg *config.Config) *C
 	categorySvc := service.NewCategoryService(categoryRepo)
 	audioSvc := service.NewAudioService(audioRepo, colorExtractorSvc)
 	playlistSvc := service.NewPlaylistService(playlistRepo, colorExtractorSvc)
-	likeSvc := service.NewLikeService(likeRepo)
+	downloadSvc := service.NewDownloadService(downloadRepo, audioRepo, favArtistRepo)
+	likeSvc := service.NewLikeService(likeRepo, downloadSvc, prefRepo)
 	historySvc := service.NewHistoryService(historyRepo)
 	otpSvc := service.NewOTPService(otpRepo, userRepo, emailSender)
 	userAuthSvc := service.NewUserAuthService(userRepo, otpRepo, otpSvc, tokenStore)
@@ -81,7 +85,6 @@ func NewContainer(db *gorm.DB, redisClient *redis.Client, cfg *config.Config) *C
 	bookmarkSvc := service.NewBookmarkService(bookmarkRepo)
 	notificationSvc := service.NewNotificationService(notificationRepo)
 	progressSvc := service.NewAudioProgressService(progressRepo)
-	downloadSvc := service.NewDownloadService(downloadRepo, audioRepo, favArtistRepo)
 	statSvc := service.NewListeningStatService(statRepo)
 	clipSvc := service.NewAudioClipService(clipRepo, audioRepo, audioConverter)
 	eventSvc := service.NewEventService(eventRepo, notificationSvc)
@@ -115,7 +118,7 @@ func NewContainer(db *gorm.DB, redisClient *redis.Client, cfg *config.Config) *C
 		UserClip:       userHandler.NewClipHandler(clipSvc, shareSvc),
 		UserEvent:      userHandler.NewEventHandler(eventSvc),
 		UserPreference: userHandler.NewPreferenceHandler(prefSvc),
-		UserVote:       userHandler.NewVoteHandler(voteSvc),
+		UserVote:       userHandler.NewVoteHandler(voteSvc, audioScoreRepo),
 		UserResume:     userHandler.NewResumeHandler(resumeSvc),
 		UserShare:      userHandler.NewShareHandler(shareSvc, playlistSvc),
 		UserFavArtist:  userHandler.NewFavoriteArtistHandler(favArtistSvc),
@@ -128,9 +131,12 @@ func NewContainer(db *gorm.DB, redisClient *redis.Client, cfg *config.Config) *C
 		RecommendationService: recommendationSvc,
 		AudioVoteService:      voteSvc,
 		NotificationService:   notificationSvc,
+		DownloadService:       downloadSvc,
 		Cache:                 cacheRepo,
 		CacheManager:          cacheMgr,
 		TokenStore:            tokenStore,
 		RankingCache:          rankingCache,
+		AudioScoreRepo:        audioScoreRepo,
+		LikeRepo:              likeRepo,
 	}
 }
