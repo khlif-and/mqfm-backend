@@ -136,6 +136,9 @@ func (m *MockLikeRepository) AggregateLikeCounts() (map[uint]int64, error) { ret
 func (m *MockLikeRepository) AggregateWeeklyLikeCounts(since time.Time) (map[uint]int64, error) {
 	return map[uint]int64{}, nil
 }
+func (m *MockLikeRepository) AggregateMonthlyLikeCounts(since time.Time) (map[uint]int64, error) {
+	return map[uint]int64{}, nil
+}
 
 type MockHistoryRepository struct {
 	UpsertFn            func(history *entity.History) error
@@ -293,7 +296,11 @@ func (m *MockAudioScoreRepository) BulkUpsert(scores []entity.AudioScore) error 
 func (m *MockAudioScoreRepository) FindTopByWeeklyLikes(limit int) ([]entity.AudioScore, error) {
 	return []entity.AudioScore{}, nil
 }
+func (m *MockAudioScoreRepository) FindTopByMonthlyLikes(limit int) ([]entity.AudioScore, error) {
+	return []entity.AudioScore{}, nil
+}
 func (m *MockAudioScoreRepository) BulkUpdateWeeklyLikes(data map[uint]int64) error { return nil }
+func (m *MockAudioScoreRepository) BulkUpdateMonthlyLikes(data map[uint]int64) error { return nil }
 
 type MockNotificationRepository struct {
 	CreateFn             func(notification *entity.Notification) error

@@ -18,6 +18,7 @@ type Handlers struct {
 	AdminPlaylist    *adminHandler.PlaylistHandler
 	AdminEvent       *adminHandler.EventHandler
 	AdminSeries      *adminHandler.SeriesHandler
+	AdminRadio       *adminHandler.RadioHandler
 	UserAuth         *userHandler.AuthHandler
 	UserPlaylist     *userHandler.PlaylistHandler
 	UserLike         *userHandler.LikeHandler

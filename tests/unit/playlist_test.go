@@ -13,28 +13,57 @@ import (
 )
 
 func TestPlaylistCreate_Success(t *testing.T) {
-repo := &playlistmock.MockPlaylistRepository{
-CreateFn: func(playlist *entity.Playlist) error { playlist.ID = 1; return nil },
+	repo := &playlistmock.MockPlaylistRepository{
+		CreateFn: func(playlist *entity.Playlist) error { playlist.ID = 1; return nil },
+	}
+	colorSvc := &audiomock.MockColorExtractorService{ExtractFn: func(p string) (string, error) { return "#fff", nil }}
+	svc := service.NewPlaylistService(repo, colorSvc)
+	playlist := &entity.Playlist{UserID: 1, Name: "My Playlist"}
+	err := svc.Create(playlist, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, uint(1), playlist.ID)
+	assert.Equal(t, uint(1), playlist.UserID)
+	assert.Equal(t, "My Playlist", playlist.Name)
 }
-colorSvc := &audiomock.MockColorExtractorService{ExtractFn: func(p string) (string, error) { return "#fff", nil }}
-svc := service.NewPlaylistService(repo, colorSvc)
-playlist := &entity.Playlist{UserID: 1, Name: "My Playlist"}
-err := svc.Create(playlist, nil)
-assert.NoError(t, err)
-assert.Equal(t, uint(1), playlist.ID)
+
+func TestPlaylistCreate_RepoError(t *testing.T) {
+	repoErr := errors.New("db error")
+	repo := &playlistmock.MockPlaylistRepository{
+		CreateFn: func(playlist *entity.Playlist) error { return repoErr },
+	}
+	colorSvc := &audiomock.MockColorExtractorService{ExtractFn: func(p string) (string, error) { return "", nil }}
+	svc := service.NewPlaylistService(repo, colorSvc)
+	playlist := &entity.Playlist{UserID: 1, Name: "Test"}
+	err := svc.Create(playlist, nil)
+	assert.ErrorIs(t, err, repoErr)
 }
 
 func TestPlaylistGetByUserID_Success(t *testing.T) {
-repo := &playlistmock.MockPlaylistRepository{
-FindByUserIDFn: func(userID uint) ([]entity.Playlist, error) {
-return []entity.Playlist{{ID: 1, UserID: userID, Name: "P1"}, {ID: 2, UserID: userID, Name: "P2"}}, nil
-},
+	repo := &playlistmock.MockPlaylistRepository{
+		FindByUserIDFn: func(userID uint) ([]entity.Playlist, error) {
+			assert.Equal(t, uint(1), userID)
+			return []entity.Playlist{{ID: 1, UserID: userID, Name: "P1"}, {ID: 2, UserID: userID, Name: "P2"}}, nil
+		},
+	}
+	colorSvc := &audiomock.MockColorExtractorService{ExtractFn: func(p string) (string, error) { return "", nil }}
+	svc := service.NewPlaylistService(repo, colorSvc)
+	playlists, err := svc.GetByUserID(1)
+	assert.NoError(t, err)
+	assert.Len(t, playlists, 2)
+	assert.Equal(t, "P1", playlists[0].Name)
+	assert.Equal(t, "P2", playlists[1].Name)
 }
-colorSvc := &audiomock.MockColorExtractorService{ExtractFn: func(p string) (string, error) { return "", nil }}
-svc := service.NewPlaylistService(repo, colorSvc)
-playlists, err := svc.GetByUserID(1)
-assert.NoError(t, err)
-assert.Len(t, playlists, 2)
+
+func TestPlaylistGetByUserID_RepoError(t *testing.T) {
+	repoErr := errors.New("timeout")
+	repo := &playlistmock.MockPlaylistRepository{
+		FindByUserIDFn: func(userID uint) ([]entity.Playlist, error) { return nil, repoErr },
+	}
+	colorSvc := &audiomock.MockColorExtractorService{ExtractFn: func(p string) (string, error) { return "", nil }}
+	svc := service.NewPlaylistService(repo, colorSvc)
+	playlists, err := svc.GetByUserID(1)
+	assert.ErrorIs(t, err, repoErr)
+	assert.Nil(t, playlists)
 }
 
 func TestPlaylistAddAudio_Success(t *testing.T) {
@@ -151,14 +180,41 @@ assert.Equal(t, "existing-token", token)
 }
 
 func TestPlaylistGetByShareToken_Success(t *testing.T) {
-repo := &playlistmock.MockPlaylistRepository{
-FindByShareFn: func(token string) (*entity.Playlist, error) {
-return &entity.Playlist{ID: 1, Name: "Shared", ShareToken: token}, nil
-},
+	repo := &playlistmock.MockPlaylistRepository{
+		FindByShareFn: func(token string) (*entity.Playlist, error) {
+			assert.Equal(t, "test-token", token, "must pass exact token")
+			return &entity.Playlist{ID: 1, Name: "Shared", ShareToken: token}, nil
+		},
+	}
+	colorSvc := &audiomock.MockColorExtractorService{ExtractFn: func(p string) (string, error) { return "", nil }}
+	svc := service.NewPlaylistService(repo, colorSvc)
+	playlist, err := svc.GetByShareToken("test-token")
+	assert.NoError(t, err)
+	assert.Equal(t, "Shared", playlist.Name)
 }
-colorSvc := &audiomock.MockColorExtractorService{ExtractFn: func(p string) (string, error) { return "", nil }}
-svc := service.NewPlaylistService(repo, colorSvc)
-playlist, err := svc.GetByShareToken("test-token")
-assert.NoError(t, err)
-assert.Equal(t, "Shared", playlist.Name)
+
+func TestPlaylistGetByShareToken_NotFound(t *testing.T) {
+	notFoundErr := errors.New("not found")
+	repo := &playlistmock.MockPlaylistRepository{
+		FindByShareFn: func(token string) (*entity.Playlist, error) { return nil, notFoundErr },
+	}
+	colorSvc := &audiomock.MockColorExtractorService{ExtractFn: func(p string) (string, error) { return "", nil }}
+	svc := service.NewPlaylistService(repo, colorSvc)
+	playlist, err := svc.GetByShareToken("bad-token")
+	assert.ErrorIs(t, err, notFoundErr)
+	assert.Nil(t, playlist)
+}
+
+func TestPlaylistRemoveAudio_RepoError(t *testing.T) {
+	removeErr := errors.New("remove failed")
+	audio := &entity.Audio{ID: 10}
+	repo := &playlistmock.MockPlaylistRepository{
+		FindByIDFn:      func(id uint) (*entity.Playlist, error) { return &entity.Playlist{ID: id, UserID: 1}, nil },
+		FindAudioByIDFn: func(id uint) (*entity.Audio, error) { return audio, nil },
+		RemoveAudioFn:   func(p *entity.Playlist, a *entity.Audio) error { return removeErr },
+	}
+	colorSvc := &audiomock.MockColorExtractorService{ExtractFn: func(p string) (string, error) { return "", nil }}
+	svc := service.NewPlaylistService(repo, colorSvc)
+	err := svc.RemoveAudioFromPlaylist(1, 10)
+	assert.ErrorIs(t, err, removeErr)
 }

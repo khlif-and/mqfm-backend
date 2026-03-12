@@ -262,4 +262,19 @@ const (
 
 	MsgRecommendLocationOK   = "Location-based content retrieved"
 	MsgRecommendTimeBasedOK  = "Time-based content retrieved"
+
+	MsgRadioCreateOK      = "Radio created"
+	MsgRadioCreateFail    = "Failed to create radio"
+	MsgRadioListOK        = "Radios retrieved"
+	MsgRadioListFail      = "Failed to fetch radios"
+	MsgRadioGetOK         = "Radio retrieved"
+	MsgRadioNotFound      = "Radio not found"
+	MsgRadioUpdateOK      = "Radio updated"
+	MsgRadioUpdateFail    = "Failed to update radio"
+	MsgRadioDeleteOK      = "Radio deleted"
+	MsgRadioDeleteFail    = "Failed to delete radio"
+	MsgRadioAudioAddOK    = "Audio added to radio"
+	MsgRadioAudioAddFail  = "Failed to add audio to radio"
+	MsgRadioAudioRemoveOK   = "Audio removed from radio"
+	MsgRadioAudioRemoveFail = "Failed to remove audio from radio"
 )

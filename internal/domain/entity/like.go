@@ -7,8 +7,8 @@ type Like struct {
 	UserID     uint      `gorm:"not null;index:idx_like_unique,unique" json:"user_id"`
 	TargetType string    `gorm:"not null;size:20;index:idx_like_unique,unique" json:"target_type"`
 	TargetID   uint      `gorm:"not null;index:idx_like_unique,unique" json:"target_id"`
-	Audio      *Audio    `gorm:"foreignKey:TargetID" json:"audio,omitempty"`
-	Playlist   *Playlist `gorm:"foreignKey:TargetID" json:"playlist,omitempty"`
+	Audio      *Audio    `gorm:"foreignKey:TargetID;constraint:OnUpdate:NO ACTION,OnDelete:NO ACTION" json:"audio,omitempty"`
+	Playlist   *Playlist `gorm:"foreignKey:TargetID;constraint:OnUpdate:NO ACTION,OnDelete:NO ACTION" json:"playlist,omitempty"`
 	CreatedAt  time.Time `json:"created_at"`
 }
 

@@ -44,6 +44,9 @@ func main() {
 	weeklyScheduler := scheduler.NewWeeklyLikeScheduler(container.AudioScoreRepo, container.LikeRepo)
 	weeklyScheduler.Start()
 
+	monthlyScheduler := scheduler.NewMonthlyLikeScheduler(container.AudioScoreRepo, container.LikeRepo)
+	monthlyScheduler.Start()
+
 	r := gin.New()
 	r.Use(gin.Recovery())
 

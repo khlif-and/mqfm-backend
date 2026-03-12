@@ -33,5 +33,8 @@ func (m *MockLikeRepository) AggregateLikeCounts() (map[uint]int64, error) { ret
 func (m *MockLikeRepository) AggregateWeeklyLikeCounts(since time.Time) (map[uint]int64, error) {
 	return map[uint]int64{}, nil
 }
+func (m *MockLikeRepository) AggregateMonthlyLikeCounts(since time.Time) (map[uint]int64, error) {
+	return map[uint]int64{}, nil
+}
 
 var _ port.LikeRepository = (*MockLikeRepository)(nil)

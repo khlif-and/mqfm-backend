@@ -231,4 +231,15 @@ type AudioConverterService interface {
 	CreateClip(inputPath string, startSec, endSec int) (string, error)
 }
 
+type RadioService interface {
+	Create(req request.CreateRadioRequest, file *multipart.FileHeader) (*entity.Radio, error)
+	FindAll() ([]entity.Radio, error)
+	FindActive() ([]entity.Radio, error)
+	FindByID(id uint) (*entity.Radio, error)
+	Update(id uint, req request.UpdateRadioRequest, file *multipart.FileHeader) (*entity.Radio, error)
+	Delete(id uint) error
+	AddAudio(radioID, audioID uint) error
+	RemoveAudio(radioID, audioID uint) error
+}
+
 

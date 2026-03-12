@@ -68,6 +68,7 @@ type LikeRepository interface {
 	CountByTarget(targetType string, targetID uint) (int64, error)
 	AggregateLikeCounts() (map[uint]int64, error)
 	AggregateWeeklyLikeCounts(since time.Time) (map[uint]int64, error)
+	AggregateMonthlyLikeCounts(since time.Time) (map[uint]int64, error)
 }
 
 type HistoryRepository interface {
@@ -94,11 +95,13 @@ type AudioScoreRepository interface {
 	FindTopByScore(limit int) ([]entity.AudioScore, error)
 	FindTopByLikes(limit int, maxLikes int64) ([]entity.AudioScore, error)
 	FindTopByWeeklyLikes(limit int) ([]entity.AudioScore, error)
+	FindTopByMonthlyLikes(limit int) ([]entity.AudioScore, error)
 	FindByAudioID(audioID uint) (*entity.AudioScore, error)
 	FindByAudioIDs(audioIDs []uint) ([]entity.AudioScore, error)
 	DeleteAll() error
 	BulkUpsert(scores []entity.AudioScore) error
 	BulkUpdateWeeklyLikes(data map[uint]int64) error
+	BulkUpdateMonthlyLikes(data map[uint]int64) error
 }
 
 type BookmarkRepository interface {
@@ -246,6 +249,19 @@ type PlaylistCollaboratorRepository interface {
 	FindByPlaylist(playlistID uint) ([]entity.PlaylistCollaborator, error)
 	Exists(playlistID, userID uint) (bool, error)
 	IsOwnerOrCollaborator(playlistID, userID uint) (bool, error)
+}
+
+type RadioRepository interface {
+	Create(radio *entity.Radio) error
+	FindAll() ([]entity.Radio, error)
+	FindActive() ([]entity.Radio, error)
+	FindByID(id uint) (*entity.Radio, error)
+	Update(id uint, updates map[string]interface{}) error
+	Delete(id uint) error
+	AddAudio(radioID, audioID uint, orderNum int) error
+	RemoveAudio(radioID, audioID uint) error
+	FindAudios(radioID uint) ([]*entity.Audio, error)
+	CountAudios(radioID uint) (int, error)
 }
 
 

@@ -54,6 +54,15 @@ func (r *audioScoreRepo) FindTopByWeeklyLikes(limit int) ([]entity.AudioScore, e
 	return scores, err
 }
 
+func (r *audioScoreRepo) FindTopByMonthlyLikes(limit int) ([]entity.AudioScore, error) {
+	var scores []entity.AudioScore
+	err := r.db.Preload("Audio").
+		Order("monthly_likes DESC").
+		Limit(limit).
+		Find(&scores).Error
+	return scores, err
+}
+
 func (r *audioScoreRepo) BulkUpdateWeeklyLikes(data map[uint]int64) error {
 	if len(data) == 0 {
 		return nil
@@ -63,6 +72,22 @@ func (r *audioScoreRepo) BulkUpdateWeeklyLikes(data map[uint]int64) error {
 			if err := tx.Model(&entity.AudioScore{}).
 				Where("audio_id = ?", audioID).
 				Update("weekly_likes", likes).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (r *audioScoreRepo) BulkUpdateMonthlyLikes(data map[uint]int64) error {
+	if len(data) == 0 {
+		return nil
+	}
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		for audioID, likes := range data {
+			if err := tx.Model(&entity.AudioScore{}).
+				Where("audio_id = ?", audioID).
+				Update("monthly_likes", likes).Error; err != nil {
 				return err
 			}
 		}

@@ -55,6 +55,7 @@ func NewContainer(db *gorm.DB, redisClient *redis.Client, cfg *config.Config) *C
 	resumeRepo := mysqlRepo.NewSmartResumeRepository(db)
 	locationRepo := mysqlRepo.NewUserLocationRepository(db)
 	collabRepo := mysqlRepo.NewPlaylistCollaboratorRepository(db)
+	radioRepo := mysqlRepo.NewRadioRepository(db)
 
 	emailSender := email.NewSender(cfg)
 	colorExtractorSvc := service.NewColorExtractorService()
@@ -74,7 +75,7 @@ func NewContainer(db *gorm.DB, redisClient *redis.Client, cfg *config.Config) *C
 
 	adminAuthSvc := service.NewAdminAuthService(adminRepo, tokenStore)
 	categorySvc := service.NewCategoryService(categoryRepo)
-	audioSvc := service.NewAudioService(audioRepo, colorExtractorSvc)
+	audioSvc := service.NewAudioService(audioRepo, colorExtractorSvc, audioConverter)
 	playlistSvc := service.NewPlaylistService(playlistRepo, colorExtractorSvc)
 	downloadSvc := service.NewDownloadService(downloadRepo, audioRepo, favArtistRepo)
 	likeSvc := service.NewLikeService(likeRepo, downloadSvc, prefRepo)
@@ -96,6 +97,7 @@ func NewContainer(db *gorm.DB, redisClient *redis.Client, cfg *config.Config) *C
 	favArtistSvc := service.NewFavoriteArtistService(favArtistRepo)
 	locationSvc := service.NewUserLocationService(locationRepo)
 	collabSvc := service.NewPlaylistCollabService(collabRepo, playlistRepo)
+	radioSvc := service.NewRadioService(radioRepo, cacheRepo, colorExtractorSvc)
 
 	handlers := &router.Handlers{
 		AdminAuth:      adminHandler.NewAuthHandler(adminAuthSvc),
@@ -104,6 +106,7 @@ func NewContainer(db *gorm.DB, redisClient *redis.Client, cfg *config.Config) *C
 		AdminPlaylist:  adminHandler.NewPlaylistHandler(playlistSvc),
 		AdminEvent:     adminHandler.NewEventHandler(eventSvc),
 		AdminSeries:    adminHandler.NewSeriesHandler(seriesSvc),
+		AdminRadio:     adminHandler.NewRadioHandler(radioSvc),
 		UserAuth:       userHandler.NewAuthHandler(userAuthSvc),
 		UserPlaylist:   userHandler.NewPlaylistHandler(playlistSvc),
 		UserLike:       userHandler.NewLikeHandler(likeSvc),
