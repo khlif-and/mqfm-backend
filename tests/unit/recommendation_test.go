@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -92,6 +93,7 @@ func TestRecommendationGetSimilar_Success(t *testing.T) {
 }
 
 func TestRecommendationRecalculateScores_Success(t *testing.T) {
+	var savedScores []entity.AudioScore
 	hr := &historymock.MockHistoryRepository{
 		AggregateFn: func() (map[uint]int64, error) { return map[uint]int64{1: 100, 2: 50}, nil },
 	}
@@ -99,11 +101,69 @@ func TestRecommendationRecalculateScores_Success(t *testing.T) {
 		AggregateFn: func() (map[uint]int64, error) { return map[uint]int64{1: 10, 2: 5}, nil },
 	}
 	sr := &audiomock.MockAudioScoreRepository{
-		BulkUpsertFn: func(scores []entity.AudioScore) error { return nil },
+		BulkUpsertFn: func(scores []entity.AudioScore) error {
+			savedScores = scores
+			return nil
+		},
 	}
 	svc := service.NewRecommendationService(&audiomock.MockAudioRepository{}, sr, hr, lr, &locationmock.MockUserLocationRepository{})
 	err := svc.RecalculateScores()
 	assert.NoError(t, err)
+	assert.Len(t, savedScores, 2)
+
+	// Verify weight formula: plays*1.0 + likes*2.0
+	scoreMap := make(map[uint]entity.AudioScore)
+	for _, s := range savedScores {
+		scoreMap[s.AudioID] = s
+	}
+	s1 := scoreMap[1]
+	assert.Equal(t, int64(100), s1.TotalPlays)
+	assert.Equal(t, int64(10), s1.TotalLikes)
+	assert.Equal(t, float64(100)*1.0+float64(10)*2.0, s1.WeightScore, "weight = plays*1.0 + likes*2.0")
+
+	s2 := scoreMap[2]
+	assert.Equal(t, int64(50), s2.TotalPlays)
+	assert.Equal(t, int64(5), s2.TotalLikes)
+	assert.Equal(t, float64(50)*1.0+float64(5)*2.0, s2.WeightScore)
+}
+
+func TestRecommendationRecalculateScores_AggregatePlaysFails(t *testing.T) {
+	playErr := errors.New("play aggregate error")
+	hr := &historymock.MockHistoryRepository{
+		AggregateFn: func() (map[uint]int64, error) { return nil, playErr },
+	}
+	svc := service.NewRecommendationService(&audiomock.MockAudioRepository{}, &audiomock.MockAudioScoreRepository{}, hr, &likemock.MockLikeRepository{}, &locationmock.MockUserLocationRepository{})
+	err := svc.RecalculateScores()
+	assert.ErrorIs(t, err, playErr)
+}
+
+func TestRecommendationRecalculateScores_AggregateLikesFails(t *testing.T) {
+	likeErr := errors.New("like aggregate error")
+	hr := &historymock.MockHistoryRepository{
+		AggregateFn: func() (map[uint]int64, error) { return map[uint]int64{}, nil },
+	}
+	lr := &likemock.MockLikeRepository{
+		AggregateFn: func() (map[uint]int64, error) { return nil, likeErr },
+	}
+	svc := service.NewRecommendationService(&audiomock.MockAudioRepository{}, &audiomock.MockAudioScoreRepository{}, hr, lr, &locationmock.MockUserLocationRepository{})
+	err := svc.RecalculateScores()
+	assert.ErrorIs(t, err, likeErr)
+}
+
+func TestRecommendationRecalculateScores_BulkUpsertFails(t *testing.T) {
+	bulkErr := errors.New("bulk upsert failed")
+	hr := &historymock.MockHistoryRepository{
+		AggregateFn: func() (map[uint]int64, error) { return map[uint]int64{1: 10}, nil },
+	}
+	lr := &likemock.MockLikeRepository{
+		AggregateFn: func() (map[uint]int64, error) { return map[uint]int64{1: 5}, nil },
+	}
+	sr := &audiomock.MockAudioScoreRepository{
+		BulkUpsertFn: func(scores []entity.AudioScore) error { return bulkErr },
+	}
+	svc := service.NewRecommendationService(&audiomock.MockAudioRepository{}, sr, hr, lr, &locationmock.MockUserLocationRepository{})
+	err := svc.RecalculateScores()
+	assert.ErrorIs(t, err, bulkErr)
 }
 
 func TestRecommendationGetLocationBased_GPSNearby(t *testing.T) {

@@ -118,3 +118,27 @@ func toSeriesResponse(s *entity.AudioSeries) response.SeriesResponse {
 func toSeriesResponseVal(s entity.AudioSeries) response.SeriesResponse {
 	return toSeriesResponse(&s)
 }
+
+func toRadioResponse(r *entity.Radio) response.RadioResponse {
+	res := response.RadioResponse{
+		ID:            r.ID,
+		Title:         r.Title,
+		Description:   r.Description,
+		Thumbnail:     r.Thumbnail,
+		DominantColor: r.DominantColor,
+		IsActive:      r.IsActive,
+		AudioCount:    len(r.Audios),
+		CreatedAt:     r.CreatedAt,
+		UpdatedAt:     r.UpdatedAt,
+	}
+	for _, a := range r.Audios {
+		if a != nil {
+			res.Audios = append(res.Audios, toAudioResponseVal(*a))
+		}
+	}
+	return res
+}
+
+func toRadioResponseVal(r entity.Radio) response.RadioResponse {
+	return toRadioResponse(&r)
+}

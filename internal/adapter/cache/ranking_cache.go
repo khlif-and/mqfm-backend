@@ -46,7 +46,7 @@ func (rc *RankingCache) GetRanking(ctx context.Context) ([]entity.AudioScore, er
 }
 
 func (rc *RankingCache) RefreshRanking(ctx context.Context) ([]entity.AudioScore, error) {
-	scores, err := rc.scoreRepo.FindTopByLikes(rankingLimit, rankingMaxLikes)
+	scores, err := rc.scoreRepo.FindTopByMonthlyLikes(rankingLimit)
 	if err != nil {
 		logger.Error("ranking cache refresh failed", zap.Error(err))
 		return nil, err

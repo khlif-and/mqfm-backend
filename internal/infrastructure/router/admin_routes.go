@@ -64,6 +64,17 @@ func registerAdminRoutes(api *gin.RouterGroup, h *Handlers) {
 				series.POST("/items", h.AdminSeries.AddItem)
 				series.DELETE("/:id/items/:audio_id", h.AdminSeries.RemoveItem)
 			}
+
+			radios := protected.Group("/radios")
+			{
+				radios.POST("/", h.AdminRadio.Create)
+				radios.GET("/", h.AdminRadio.FindAll)
+				radios.GET("/:id", h.AdminRadio.FindByID)
+				radios.PUT("/:id", h.AdminRadio.Update)
+				radios.DELETE("/:id", h.AdminRadio.Delete)
+				radios.POST("/audios", h.AdminRadio.AddAudio)
+				radios.DELETE("/:id/audios/:audio_id", h.AdminRadio.RemoveAudio)
+			}
 		}
 	}
 }

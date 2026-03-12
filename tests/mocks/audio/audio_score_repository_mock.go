@@ -37,6 +37,10 @@ func (m *MockAudioScoreRepository) BulkUpsert(scores []entity.AudioScore) error 
 func (m *MockAudioScoreRepository) FindTopByWeeklyLikes(limit int) ([]entity.AudioScore, error) {
 	return []entity.AudioScore{}, nil
 }
+func (m *MockAudioScoreRepository) FindTopByMonthlyLikes(limit int) ([]entity.AudioScore, error) {
+	return []entity.AudioScore{}, nil
+}
 func (m *MockAudioScoreRepository) BulkUpdateWeeklyLikes(data map[uint]int64) error { return nil }
+func (m *MockAudioScoreRepository) BulkUpdateMonthlyLikes(data map[uint]int64) error { return nil }
 
 var _ port.AudioScoreRepository = (*MockAudioScoreRepository)(nil)

@@ -83,7 +83,7 @@ func (h *VoteHandler) WeeklyRanking(c *gin.Context) {
 		item := response.RankingResponse{
 			Rank:      i + 1,
 			AudioID:   s.AudioID,
-			Likes:     s.TotalLikes,
+			Likes:     s.WeeklyLikes,
 			UpdatedAt: s.UpdatedAt,
 		}
 		if s.Audio != nil {
@@ -102,7 +102,7 @@ func (h *VoteHandler) MonthlyRanking(c *gin.Context) {
 		limit = 20
 	}
 
-	scores, err := h.scoreRepo.FindTopByLikes(limit, 35000)
+	scores, err := h.scoreRepo.FindTopByMonthlyLikes(limit)
 	if err != nil {
 		resp.Error(c, http.StatusInternalServerError, constant.MsgRankingFail, err.Error())
 		return
@@ -113,7 +113,7 @@ func (h *VoteHandler) MonthlyRanking(c *gin.Context) {
 		item := response.RankingResponse{
 			Rank:      i + 1,
 			AudioID:   s.AudioID,
-			Likes:     s.TotalLikes,
+			Likes:     s.MonthlyLikes,
 			UpdatedAt: s.UpdatedAt,
 		}
 		if s.Audio != nil {

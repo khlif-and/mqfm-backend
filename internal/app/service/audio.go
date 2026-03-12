@@ -14,10 +14,11 @@ import (
 type audioService struct {
 	repo           port.AudioRepository
 	colorExtractor port.ColorExtractorService
+	converter      port.AudioConverterService
 }
 
-func NewAudioService(repo port.AudioRepository, colorExtractor port.ColorExtractorService) port.AudioService {
-	return &audioService{repo: repo, colorExtractor: colorExtractor}
+func NewAudioService(repo port.AudioRepository, colorExtractor port.ColorExtractorService, converter port.AudioConverterService) port.AudioService {
+	return &audioService{repo: repo, colorExtractor: colorExtractor, converter: converter}
 }
 
 func (s *audioService) Create(req request.CreateAudioRequest, audioFile *multipart.FileHeader, thumbnailFile *multipart.FileHeader) (*entity.Audio, error) {
@@ -64,6 +65,10 @@ func (s *audioService) Create(req request.CreateAudioRequest, audioFile *multipa
 
 	if err := s.repo.Create(&audio); err != nil {
 		return nil, err
+	}
+
+	if audio.FilePath != "" && s.converter != nil {
+		go s.convertToOGG(audio.ID, audio.FilePath)
 	}
 
 	return &audio, nil
@@ -128,6 +133,10 @@ func (s *audioService) Update(id uint, req request.UpdateAudioRequest, audioFile
 		return nil, err
 	}
 
+	if path, ok := updates["file_path"].(string); ok && s.converter != nil {
+		go s.convertToOGG(id, path)
+	}
+
 	return s.repo.FindByID(id)
 }
 
@@ -137,4 +146,13 @@ func (s *audioService) Delete(id uint) error {
 
 func (s *audioService) Search(query string) ([]entity.Audio, error) {
 	return s.repo.Search(query)
+}
+
+func (s *audioService) convertToOGG(audioID uint, filePath string) {
+	oggPath, err := s.converter.ConvertToOGG(filePath)
+	if err != nil {
+		logger.Error("ogg conversion failed for audio " + filePath)
+		return
+	}
+	_ = s.repo.Update(audioID, map[string]interface{}{"ogg_path": oggPath})
 }

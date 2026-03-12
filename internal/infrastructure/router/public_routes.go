@@ -34,4 +34,7 @@ func registerPublicRoutes(api *gin.RouterGroup, h *Handlers) {
 	api.GET("/events/:id", middleware.OptionalJWTAuth(), h.UserEvent.GetByID)
 	api.GET("/votes/ranking/weekly", h.UserVote.WeeklyRanking)
 	api.GET("/votes/ranking/monthly", h.UserVote.MonthlyRanking)
+
+	api.GET("/radios", h.AdminRadio.FindActive)
+	api.GET("/radios/:id", h.AdminRadio.FindByID)
 }
